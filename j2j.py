@@ -49,8 +49,10 @@ class j2jComponent(component.Service):
 
         el.attributes['to'] = utils.unquoteJID(to.full())
         del el.attributes['from']
-        el.uri=None
-        el.defaultUri=None
+        if el.attributes.has_key("xmlns"):
+            del el.attributes['xmlns']
+        #el.uri=None
+        #el.defaultUri=None
 
         self.clients[fro.full()].send(el)
 
@@ -63,9 +65,69 @@ class j2jComponent(component.Service):
             to=internJID(to)
         except:
             return
+
         if to.full()==config.JID:
             self.componentPresence(el,fro,presenceType)
             return
+
+        uid=self.db.getIdByJid(fro.userhost())
+        if not uid:
+            return
+
+        if presenceType=="available" or presenceType==None:
+            froStr=fro.full()
+            if not self.clients.has_key(fro.full()): return
+            if not utils.unquoteJID(to.userhost()) in self.clients[froStr].presences_available:
+                self.clients[froStr].presences_available.append(utils.unquoteJID(to.userhost()))
+            if not utils.unquoteJID(to.full()) in self.clients[froStr].presences_available_full:
+                self.clients[froStr].presences_available_full.append(utils.unquoteJID(to.full()))
+
+        if presenceType=="subscribe":
+            froStr=fro.userhost()
+            toUnq=utils.unquoteJID(to.userhost())
+            f=False
+            for cl in self.clients.keys():
+                if cl.find(froStr+"/")==0:
+                    f=True
+                    froStr=cl
+            if not f: return
+            if self.clients[froStr].roster.items.has_key(toUnq):
+                if not self.db.getCount('rosters',"id='%s' AND jid='%s'" % (str(uid),toUnq.encode("utf-8"))):
+                    self.db.execute("INSERT INTO %s (id,jid) VALUES ('%s','%s')" % (self.db.dbTablePrefix+"rosters", str(uid), self.db.dbQuote(toUnq.encode("utf-8"))))
+                    self.db.commit()
+                subscription=self.clients[froStr].roster.items[toUnq][1]
+                if subscription in ["both","to"]:
+                    p = Element((None,"presence"))
+                    p.attributes["to"]=fro.userhost()
+                    p.attributes["from"]=to.userhost()
+                    p.attributes["type"]="subscribed"
+                    self.send(p)
+                    if subscription=="both":
+                        p.attributes["type"]="subscribe"
+                        self.send(p)
+
+                    for pr in self.clients[cl].presences.keys():
+                        if pr.split('/')[0]==toUnq:
+                            pres=self.clients[froStr].presences[pr]
+                            pres.attributes["from"]=utils.quoteJID(pr)
+                            pres.attributes["to"]=fro.full()
+                            pres.uri=None
+                            pres.defaultUri=None
+                            self.send(pres)
+                    return
+
+        if presenceType=="unsubscribe":
+            toUnq=utils.unquoteJID(to.full())
+            if self.db.getCount('rosters',"id='%s' AND jid='%s'" % (str(uid),toUnq.encode("utf-8"))):
+                self.db.execute("DELETE FROM %s WHERE id='%s' AND jid='%s'" % (self.db.dbTablePrefix+"rosters", str(uid), self.db.dbQuote(toUnq.encode('utf-8'))))
+                self.db.commit()
+                p = Element((None,'presence'))
+                p.attributes["to"]=fro.userhost()
+                p.attributes["from"]=to.userhost()
+                p.attributes["type"]="unsubscribed"
+                self.send(p)
+                return
+        self.routeStanza(el,fro,to)
 
     def componentPresence(self,el,fro,presenceType):
         uid=self.db.getIdByJid(fro.userhost())
@@ -168,7 +230,7 @@ class j2jComponent(component.Service):
             if xmlns=="http://jabber.org/protocol/disco#info" and iqType=="get":
                 self.getDiscoInfo(el,fro,ID,node)
                 return
-            
+
             if xmlns=="http://jabber.org/protocol/disco#items" and iqType=="get":
                 self.getDiscoItems(el,fro,ID,node)
                 return
@@ -179,6 +241,14 @@ class j2jComponent(component.Service):
 
             if xmlns=="jabber:iq:version" and iqType=="get":
                 self.getVersion(fro,ID)
+                return
+
+            if xmlns=="jabber:iq:gateway" and iqType=="get":
+                self.getIqGateway(fro,ID)
+                return
+
+            if xmlns=="jabber:iq:gateway" and iqType=="set":
+                self.setIqGateway(el,fro,ID)
                 return
 
             self.sendIqError(to=fro.full(), fro=config.JID, ID=ID, xmlns=xmlns, etype="cancel", condition="feature-not-implemented")
@@ -273,6 +343,34 @@ class j2jComponent(component.Service):
             pres.attributes["type"]="subscribe"
             self.send(pres)
 
+    def getIqGateway(self,fro,ID):
+        iq = Element((None,"iq"))
+        iq.attributes["type"]="result"
+        iq.attributes["from"]=config.JID
+        iq.attributes["to"]=fro.full()
+        if ID:
+            iq.attributes["id"]=ID
+        query=iq.addElement("query")
+        query.attributes["xmlns"]="jabber:iq:gateway"
+        query.addElement("desc",content="Enter XMPP name below")
+        query.addElement("prompt",content="XMPP name")
+        self.send(iq)
+
+    def setIqGateway(self,el,fro,ID):
+        iq = Element((None,"iq"))
+        iq.attributes["type"]="result"
+        iq.attributes["from"]=config.JID
+        iq.attributes["to"]=fro.full()
+        if ID:
+            iq.attributes["id"]=ID
+        prompt=xpath.XPathQuery('/iq/query[@xmlns="jabber:iq:gateway"]/prompt').queryForString(el)
+        if prompt==None:
+            prompt=''
+        query=iq.addElement("query")
+        query.attributes["xmlns"]="jabber:iq:gateway"
+        query.addElement("jid",content=utils.quoteJID(prompt))
+        self.send(iq)
+
     def getLast(self,fro,ID):
         iq = Element((None,"iq"))
         iq.attributes["type"]="result"
@@ -294,7 +392,7 @@ class j2jComponent(component.Service):
             iq.attributes["id"]=ID
         query=iq.addElement("query")
         query.attributes["xmlns"]="jabber:iq:version"
-        query.addElement("name",content="J2J Transport (http://JRuDevels.org)")
+        query.addElement("name",content="J2J Transport (http://JRuDevels.org) Twisted-version")
         query.addElement("version",content=self.VERSION)
         self.send(iq)
 
@@ -314,6 +412,7 @@ class j2jComponent(component.Service):
             identity.attributes["name"]="J2J: XMPP-Transport"
             identity.attributes["category"]="gateway"
             identity.attributes["type"]="XMPP"
+            query.addElement("feature").attributes["var"]="jabber:iq:gateway"
             query.addElement("feature").attributes["var"]="jabber:iq:register"
             query.addElement("feature").attributes["var"]="jabber:iq:last"
             query.addElement("feature").attributes["var"]="jabber:iq:version"
