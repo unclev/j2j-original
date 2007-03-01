@@ -249,7 +249,25 @@ class j2jComponent(component.Service):
                 self.setIqGateway(el,fro,ID)
                 return
 
+            if xmlns=="vcard-temp" and iqType=="get" and query.name=="vCard":
+                self.getvcard(fro,ID)
+                return
+
             self.sendIqError(to=fro.full(), fro=config.JID, ID=ID, xmlns=xmlns, etype="cancel", condition="feature-not-implemented")
+
+    def getvcard(self,fro,ID):
+        iq = Element((None,"iq"))
+        iq.attributes["type"]="result"
+        iq.attributes["from"]=config.JID
+        iq.attributes["to"]=fro.full()
+        if ID:
+            iq.attributes["id"]=ID
+        vcard=iq.addElement("vCard")
+        vcard.attributes["xmlns"]="vcard-temp"
+        vcard.addElement("NICKNAME",content="J2J")
+        vcard.addElement("DESC",content="Jabber-To-Jabber Transport (GTalk, LiveJournal inside)")
+        vcard.addElement("URL",content="http://JRuDevels.org")
+        self.send(iq)
 
     def getRegister(self,el,fro,ID):
         iq = Element((None,"iq"))
@@ -438,6 +456,9 @@ class j2jComponent(component.Service):
             identity.attributes["name"]="J2J: XMPP-Transport"
             identity.attributes["category"]="gateway"
             identity.attributes["type"]="XMPP"
+            query.addElement("feature").attributes["var"]="vcard-temp"
+            query.addElement("feature").attributes["var"]="http://jabber.org/protocol/disco#items"
+            query.addElement("feature").attributes["var"]="http://jabber.org/protocol/disco#info"
             query.addElement("feature").attributes["var"]="jabber:iq:gateway"
             query.addElement("feature").attributes["var"]="jabber:iq:register"
             query.addElement("feature").attributes["var"]="jabber:iq:last"
