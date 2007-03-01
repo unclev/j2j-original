@@ -1,0 +1,11 @@
+class config:
+    JID=u"xmpp.server"
+    HOST="server"
+    PORT="8888"
+    PASSWORD="secret"
+
+    DB_HOST=None
+    DB_USER="user"
+    DB_NAME="j2j"
+    DB_PASS="dbsecret"
+    DB_PREFIX="j2j_"
