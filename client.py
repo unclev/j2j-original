@@ -125,7 +125,6 @@ class Client(object):
     def onIq(self,el):
         for query in el.elements():
             if query.uri=="jabber:iq:roster":
-                print "!"
                 return
         self.route(el)
 
