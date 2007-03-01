@@ -253,7 +253,38 @@ class j2jComponent(component.Service):
                 self.getvcard(fro,ID)
                 return
 
+            if xmlns=="http://jabber.org/protocol/stats":
+                self.getStats(el,fro,ID)
+                return
+
             self.sendIqError(to=fro.full(), fro=config.JID, ID=ID, xmlns=xmlns, etype="cancel", condition="feature-not-implemented")
+
+    def getStats(self,el,fro,ID):
+        iq = Element((None,"iq"))
+        iq.attributes["type"]="result"
+        iq.attributes["from"]=config.JID
+        iq.attributes["to"]=fro.full()
+        if ID:
+            iq.attributes["id"]=ID
+        query=iq.addElement("query")
+        query.attributes["xmlns"]="http://jabber.org/protocol/stats"
+        nodes=xpath.XPathQuery("/iq/query[@xmlns='http://jabber.org/protocol/stats']/stat").queryForNodes(el)
+        if nodes:
+            for node in nodes:
+                if node.getAttribute("name")=="users/online":
+                    o=query.addElement("stat")
+                    o.attributes["name"]="users/online"
+                    o.attributes["units"]="users"
+                    o.attributes["value"]=str(len(self.clients.keys()))
+                if node.getAttribute("name")=="users/total":
+                    t=query.addElement("stat")
+                    t.attributes["name"]="users/total"
+                    t.attributes["units"]="users"
+                    t.attributes["value"]=str(self.db.getCount("users"))
+        else:
+            query.addElement("stat").attributes["name"]="users/online"
+            query.addElement("stat").attributes["name"]="users/total"
+        self.send(iq)
 
     def getvcard(self,fro,ID):
         iq = Element((None,"iq"))
@@ -457,6 +488,7 @@ class j2jComponent(component.Service):
             identity.attributes["category"]="gateway"
             identity.attributes["type"]="XMPP"
             query.addElement("feature").attributes["var"]="vcard-temp"
+            query.addElement("feature").attributes["var"]="http://jabber.org/protocol/stats"
             query.addElement("feature").attributes["var"]="http://jabber.org/protocol/disco#items"
             query.addElement("feature").attributes["var"]="http://jabber.org/protocol/disco#info"
             query.addElement("feature").attributes["var"]="jabber:iq:gateway"
