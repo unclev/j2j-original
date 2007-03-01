@@ -1,0 +1,168 @@
+import sys
+import utils
+from config import config
+from roster import roster
+from twisted.names.error import DNSNameError
+from twisted.internet.error import DNSLookupError,TimeoutError,ConnectionDone
+from twisted.names.srvconnect import SRVConnector
+from twisted.words.xish import domish
+from twisted.words.protocols.jabber import xmlstream, client, jid
+from twisted.words.xish.domish import Element
+from twisted.words.protocols.jabber.jid import internJID
+from twisted.internet import threads
+from twisted.words.protocols.jabber.xmlstream import FeatureNotAdvertized
+from twisted.words.protocols.jabber.error import StanzaError
+from twisted.words.protocols.jabber.sasl import SASLNoAcceptableMechanism,SASLAuthError
+
+class XMPPClientConnector(SRVConnector):
+    def __init__(self, reactor, domain, factory, port=5222):
+        self.port=port
+        SRVConnector.__init__(self, reactor, 'xmpp-client', domain, factory)
+
+class ClientFactory(xmlstream.XmlStreamFactory):
+    def __init__(self,a,host):
+        self.host=host
+        xmlstream.XmlStreamFactory.__init__(self,a)
+        self.maxRetries=1
+
+    def clientConnectionFailed(self, connector, reason):
+        error="remote-server-not-found"
+        if reason.check(DNSNameError,DNSLookupError) and self.host.tryingSRV:
+            self.stopTrying()
+            self.host.tryingSRV=False
+            self.host.reactor.connectTCP(self.host.server,self.host.port,self.host.f)
+            return
+        elif reason.check(DNSNameError,DNSLookupError) and not self.host.tryingSRV:
+            self.stopTrying()
+        elif reason.check(TimeoutError):
+            error="remote-server-timeout"
+        self.host.component.sendPresenceError(self.host.host_jid.full(),config.JID,"cancel",error)
+        self.host.component.deleteClient(self.host.host_jid)
+
+    def clientConnectionLost(self, connector, reason):
+        pass
+
+class Client(object):
+    def __init__(self, el, reactor, component, host_jid, client_jid, server, secret, port=5222):
+        self.component=component
+        self.connected=False
+        self.host_jid=host_jid
+        self.roster=roster(self)
+        self.reactor=reactor
+        self.server=server
+        self.port=port
+        self.client_jid=client_jid
+        self.disconnect=False
+        self.error=False
+        self.secret=secret
+        a = client.XMPPAuthenticator(client_jid, secret)
+        self.f = ClientFactory(a,self)
+        self.f.addBootstrap(xmlstream.STREAM_CONNECTED_EVENT, self.onConnected)
+        self.f.addBootstrap(xmlstream.STREAM_END_EVENT, self.onDisconnected)
+        self.f.addBootstrap(xmlstream.STREAM_AUTHD_EVENT, self.onAuthenticated)
+        self.f.addBootstrap(xmlstream.INIT_FAILED_EVENT, self.onInitFailed)
+        self.startPresence=el
+        self.tryingSRV = True
+        self.tryingNonSASL = False
+        self.tryingSASL = True
+        self.connector = XMPPClientConnector(reactor, server, self.f, port)
+        self.connector.connect()
+        #reactor.connectTCP(server,port,self.f)
+
+    def onConnected(self, xs):
+        self.xmlstream = xs
+        if not self.disconnect:
+            self.connected = True
+        else:
+            self.xmlstream.sendFooter()
+
+    def onDisconnected(self, xs):
+        if self.tryingNonSASL and not self.connected: return
+        self.f.stopTrying()
+        if not self.error:
+            presence=Element((None,'presence'))
+            presence.attributes['to']=self.host_jid.full()
+            presence.attributes['from']=config.JID
+            presence.attributes['type']='unavailable'
+            presence.addElement('status',content="Disconnected")
+            self.component.send(presence)
+        self.component.deleteClient(self.host_jid)
+
+    def onAuthenticated(self, xs):
+        if self.disconnect:
+            xs.sendFooter()
+            return
+
+        presence=Element((None,'presence'))
+        presence.attributes['to']=self.host_jid.full()
+        presence.attributes['from']=config.JID
+        presence.addElement('status',content="Online")
+        self.component.send(presence)
+
+        self.xmlstream.addObserver("/iq/query[@xmlns='jabber:iq:roster']",self.roster.onIq)
+        self.xmlstream.addObserver("/message",self.onMessage)
+        self.xmlstream.addObserver("/iq",self.onIq)
+
+
+        self.startPresence.attributes={}
+
+        self.startPresence.uri=None
+        self.startPresence.defaultUri=None
+
+        xs.send(self.startPresence)
+        del self.startPresence
+
+        rosterReq=Element((None,'iq'))
+        rosterReq.attributes['type']='get'
+        rosterReq.attributes['id']='getRoster'
+        rosterQ=rosterReq.addElement('query')
+        rosterQ.attributes['xmlns']='jabber:iq:roster'
+        xs.send(rosterReq)
+
+    def onMessage(self,el):
+        self.route(el)
+
+    def onIq(self,el):
+        self.route(el)
+
+    def route(self,el):
+        fro = el.getAttribute("from")
+        to = el.getAttribute("to")
+        try:
+            fro=internJID(fro)
+            to=internJID(to)
+        except:
+            return
+        el.attributes["from"]=utils.quoteJID(fro.full())
+        el.attributes["to"]=self.host_jid.full()
+        self.component.send(el)
+
+    def send(self, el):
+        self.xmlstream.send(el)
+
+    def onInitFailed(self, failure):
+        if failure.check(ConnectionDone):
+            self.xmlstream.sendFooter()
+            return
+
+        if failure.check(StanzaError,SASLNoAcceptableMechanism,SASLAuthError):
+            self.error=True
+            self.component.sendPresenceError(self.host_jid.full(),config.JID,"cancel",'not-authorized')
+            self.onDisconnected(None)
+            return
+
+        if failure.check(FeatureNotAdvertized) and self.tryingSASL:
+            self.tryingSASL = False
+            self.tryingSRV = True
+            self.tryingNonSASL = True
+            a = client.BasicAuthenticator(self.client_jid, self.secret)
+            xmlstream.XmlStreamFactory(a)
+            self.f = ClientFactory(a,self)
+            self.f.addBootstrap(xmlstream.STREAM_CONNECTED_EVENT, self.onConnected)
+            self.f.addBootstrap(xmlstream.STREAM_END_EVENT, self.onDisconnected)
+            self.f.addBootstrap(xmlstream.STREAM_AUTHD_EVENT, self.onAuthenticated)
+            self.f.addBootstrap(xmlstream.INIT_FAILED_EVENT, self.onInitFailed)
+            self.connector = XMPPClientConnector(self.reactor, self.server, self.f, self.port)
+            self.connector.connect()
+            return
+        self.xmlstream.sendFooter()
