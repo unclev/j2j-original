@@ -5,7 +5,7 @@ from roster import roster
 from twisted.names.error import DNSNameError
 from twisted.internet.error import DNSLookupError,TimeoutError,ConnectionDone
 from twisted.names.srvconnect import SRVConnector
-from twisted.words.xish import domish
+from twisted.words.xish import domish,xpath
 from twisted.words.protocols.jabber import xmlstream, client, jid
 from twisted.words.xish.domish import Element
 from twisted.words.protocols.jabber.jid import internJID
@@ -168,6 +168,11 @@ class Client(object):
         for query in el.elements():
             if query.uri=="jabber:iq:roster":
                 return
+        nodes=xpath.XPathQuery('/iq/query[@xmlns="http://jabber.org/protocol/disco#items"]/item').queryForNodes(el)
+        if nodes:
+            for node in nodes:
+                if node.attributes.has_key("jid"):
+                    node.attributes["jid"]=utils.quoteJID(node.attributes["jid"])
         self.route(el)
 
     def route(self,el):
