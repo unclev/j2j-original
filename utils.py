@@ -26,10 +26,11 @@ errorCodeMap = {
 	"unexpected-request"		:	400
 }
 
-def addDiscoItem(query, jid, name, node=None):
+def addDiscoItem(query, jid, name=None, node=None):
     item=query.addElement("item")
     item.attributes["jid"]=jid
-    item.attributes["name"]=name
+    if name:
+        item.attributes["name"]=name
     if node:
         item.attributes["node"]=node
     return item
