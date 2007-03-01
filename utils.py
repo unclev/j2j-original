@@ -31,7 +31,10 @@ def quoteJID(ujid):
     if ujid=='' or ujid==None:
         return ''
     els=jid.parse(ujid)
-    qjid=els[0]+"@"+els[1]
+    if els[0]==None:
+        qjid=els[1]
+    else:
+        qjid=els[0]+"@"+els[1]
     qjid=qjid.replace('%','\\%')
     qjid=qjid.replace('@','%')
     qjid=qjid+'@'+config.JID
