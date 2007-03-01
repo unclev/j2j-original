@@ -294,7 +294,19 @@ class j2jComponent(component.Service):
                 if j.find(fro.userhost()+"/")==0:
                     if self.clients[j].connected:
                         self.clients[j].xmlstream.sendFooter()
-                    del self.clients[j]
+            unPres=Element((None,"presence"))
+            unPres.attributes["to"]=fro.full()
+            unPres.attributes["type"]="unavailable"
+            for ojid in self.clients[fro.full()].presences_available_full:
+                unPres.attributes["from"]=utils.quoteJID(ojid)
+                self.send(unPres)
+            ujids=self.db.fetchall("SELECT jid FROM %s WHERE id='%s'" % (self.db.dbTablePrefix+"rosters",str(uid)))
+            for ojid in ujids:
+                unPres.attributes["from"]=utils.quoteJID(ojid[0])
+                unPres.attributes["type"]="unsubscribe"
+                self.send(unPres)
+                unPres.attributes["type"]="unsubscribed"
+                self.send(unPres)
             self.db.execute("DELETE from "+self.db.dbTablePrefix+"rosters WHERE id="+str(uid))
             self.db.execute("DELETE from "+self.db.dbTablePrefix+"users_options WHERE id="+str(uid))
             self.db.execute("DELETE from "+self.db.dbTablePrefix+"users WHERE id="+str(uid))
@@ -340,6 +352,22 @@ class j2jComponent(component.Service):
             pres.attributes["from"]=config.JID
             pres.attributes["type"]="subscribe"
             self.send(pres)
+        elif edit:
+            data=self.db.getDataById(uid)
+            if data[0]!=username or data[2]!=server:
+                a=self.db.fetchall("SELECT jid FROM %s WHERE id='%s'" % (self.db.dbTablePrefix+"rosters",str(uid)))
+                for unjid in a:
+                    pres=Element((None,"presence"))
+                    pres.attributes["to"]=fro.userhost()
+                    pres.attributes["from"]=utils.quoteJID(unjid[0])
+                    pres.attributes["type"]="unsubscribe"
+                    self.send(pres)
+                    pres.attributes["type"]="unsubscribed"
+                    self.send(pres)
+                self.db.execute("DELETE FROM %s WHERE id='%s'" % (self.db.dbTablePrefix+"rosters",str(uid)))
+            self.db.execute("UPDATE %s SET username='%s', domain='%s', server='%s', password='%s', port=%s WHERE id='%s'" % (self.db.dbTablePrefix+"users",self.db.dbQuote(username),self.db.dbQuote(domain),self.db.dbQuote(server),self.db.dbQuote(password),str(port),str(uid)))
+            self.db.commit()
+            self.sendIqResult(fro.full(),config.JID,ID,"jabber:iq:register")
 
     def getIqGateway(self,fro,ID):
         iq = Element((None,"iq"))
