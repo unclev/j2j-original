@@ -36,6 +36,19 @@ class roster:
                         groups.append(group)
         return groups
 
+    def getAllInGroup(self,group):
+        if group=="Undefined": group=None
+        all=[]
+        for contact in self.items.keys():
+            if group:
+                if group in self.items[contact][2]:
+                    con=[contact,self.items[contact][0]]
+                    all.append(con)
+            elif self.items[contact][2]==[]:
+                con=[contact,self.items[contact][0]]
+                all.append(con)
+        return all
+
     def onIq(self,el):
         iqType=el.attributes["type"]
         if not iqType in ["set","result"]: return
