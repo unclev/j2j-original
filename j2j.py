@@ -51,8 +51,6 @@ class j2jComponent(component.Service):
         del el.attributes['from']
         if el.attributes.has_key("xmlns"):
             del el.attributes['xmlns']
-        #el.uri=None
-        #el.defaultUri=None
 
         self.clients[fro.full()].send(el)
 
