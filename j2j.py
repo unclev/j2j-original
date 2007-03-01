@@ -1,0 +1,374 @@
+import md5
+from config import config
+from client import Client
+import time
+import sys
+import codecs #!
+import utils
+import database
+from twisted.internet import reactor
+from twisted.words.xish import domish,xpath
+from twisted.words.xish.domish import Element
+from twisted.words.protocols.jabber import xmlstream, client, jid, component
+from twisted.words.protocols.jabber.jid import internJID
+
+reload(sys)
+sys.setdefaultencoding("utf-8")
+sys.stdout = codecs.lookup('utf-8')[-1](sys.stdout)
+
+class j2jComponent(component.Service):
+    VERSION="0.0.1"
+
+    def __init__(self,reactor):
+        self.reactor=reactor
+
+    def componentConnected(self, xs):
+        self.startTime = time.time()
+        self.clients = {}
+        self.db=database.database()
+        self.xmlstream = xs
+        self.xmlstream.addObserver("/iq", self.onIq)
+        self.xmlstream.addObserver("/presence", self.onPresence)
+        self.xmlstream.addObserver("/message", self.onMessage)
+        print "Connected"
+
+    def onMessage(self,el):
+        fro = el.getAttribute("from")
+        to = el.getAttribute("to")
+        try:
+            fro=internJID(fro)
+            to=internJID(to)
+        except:
+            return
+        if to.full()==config.JID: return
+        self.routeStanza(el,fro,to)
+
+    def routeStanza(self, el, fro, to):
+        if not self.clients.has_key(fro.full()):
+            return
+
+        el.attributes['to'] = utils.unquoteJID(to.full())
+        del el.attributes['from']
+        el.uri=None
+        el.defaultUri=None
+
+        self.clients[fro.full()].send(el)
+
+    def onPresence(self, el):
+        fro = el.getAttribute("from")
+        to = el.getAttribute("to")
+        presenceType = el.getAttribute("type")
+        try:
+            fro=internJID(fro)
+            to=internJID(to)
+        except:
+            return
+        if to.full()==config.JID:
+            self.componentPresence(el,fro,presenceType)
+            return
+
+    def componentPresence(self,el,fro,presenceType):
+        uid=self.db.getIdByJid(fro.userhost())
+        if not uid:
+            self.sendPresenceError(to=fro.full(),fro=config.JID,etype="cancel",condition="registration-required")
+            return
+        data=self.db.getDataById(uid)
+        resource=jid.parse(fro.full())[2]
+        if resource==None:
+            resource=''
+        else:
+            resource="/"+resource
+        clientJid=jid.JID(data[0]+"@"+data[2]+resource)
+        if data[3]==None or data[3]=='':
+            data[3]=data[2]
+        newjid=(data[0]+"@"+data[2]).encode('utf-8')
+        newmd5=md5.md5(newjid).hexdigest()
+        if not self.clients.has_key(fro.full()) and (presenceType=="available" or presenceType==None):
+            js=[]
+            for element in el.elements():
+                if element.name=="x" and element.uri=="j2j:history":
+                    try:
+                        hops=int(element.attributes["hops"])
+                    except:
+                        hops=0
+                    if hops>3:
+                        self.sendPresenceError(fro.full(),config.JID,"cancel","not-allowed")
+                        return
+                    element.attributes["hops"]=str(hops+1)
+                    for jidmd5 in element.elements():
+                        if jidmd5.name=="jid":
+                            js.append(unicode(jidmd5))
+                    element.addElement("jid",content=md5.md5(fro.full().encode("utf-8")).hexdigest())
+            if newmd5 in js:
+                self.sendPresenceError(fro.full(),config.JID,"cancel","conflict")
+                return
+            if js==[]:
+                j2jh=el.addElement("x")
+                j2jh.uri="j2j:history"
+                j2jh.defaultUri="j2j:history"
+                j2jh.attributes["hops"]="1"
+                j2jh.addElement("jid",content=md5.md5(fro.full().encode("utf-8")).hexdigest())
+            presence=Element((None,'presence'))
+            presence.attributes['to']=fro.full()
+            presence.attributes['from']=config.JID
+            presence.addElement('show',content="xa")
+            presence.addElement('status',content="Logging in...")
+            self.send(presence)
+            self.clients[fro.full()]=Client(el,self.reactor,self,fro,clientJid,data[3],data[1],data[4])
+        elif self.clients.has_key(fro.full()) and presenceType=="unavailable":
+            if self.clients[fro.full()].connected:
+                self.clients[fro.full()].xmlstream.sendFooter()
+            else:
+                self.disconnect=True
+        elif self.clients.has_key(fro.full()) and (presenceType=="available" or presenceType==None):
+            if self.clients[fro.full()].connected:
+                del el.attributes["to"]
+                del el.attributes["from"]
+                el.uri=None
+                el.defaultUri=None
+                self.clients[fro.full()].send(el)
+        elif presenceType=="subscribe":
+            presence=Element((None,'presence'))
+            presence.attributes['to']=fro.full()
+            presence.attributes['from']=config.JID
+            presence.attributes['type']='subscribed'
+            self.send(presence)
+
+    def deleteClient(self,jid):
+        del self.clients[jid.full()]
+
+    def onIq(self, el):
+        fro = el.getAttribute("from")
+        to = el.getAttribute("to")
+        ID = el.getAttribute("id")
+        iqType = el.getAttribute("type")
+        try:
+            fro=internJID(fro)
+            to=internJID(to)
+        except Exception, e:
+            return
+        if to.full()==config.JID:
+            self.componentIq(el,fro,ID,iqType)
+            return
+        self.routeStanza(el,fro,to)
+
+    def componentIq(self,el,fro,ID,iqType):
+        for query in el.elements():
+            xmlns=query.uri
+            node=query.getAttribute("node")
+
+            if xmlns=="jabber:iq:register" and iqType=="get":
+                self.getRegister(el,fro,ID)
+                return
+
+            if xmlns=="jabber:iq:register" and iqType=="set":
+                self.setRegister(el,fro,ID)
+                return
+
+            if xmlns=="http://jabber.org/protocol/disco#info" and iqType=="get":
+                self.getDiscoInfo(el,fro,ID,node)
+                return
+            
+            if xmlns=="http://jabber.org/protocol/disco#items" and iqType=="get":
+                self.getDiscoItems(el,fro,ID,node)
+                return
+
+            if xmlns=="jabber:iq:last" and iqType=="get":
+                self.getLast(fro,ID)
+                return
+
+            if xmlns=="jabber:iq:version" and iqType=="get":
+                self.getVersion(fro,ID)
+                return
+
+            self.sendIqError(to=fro.full(), fro=config.JID, ID=ID, xmlns=xmlns, etype="cancel", condition="feature-not-implemented")
+
+    def getRegister(self,el,fro,ID):
+        iq = Element((None,"iq"))
+        iq.attributes["type"]="result"
+        iq.attributes["from"]=config.JID
+        iq.attributes["to"]=fro.full()
+        if ID:
+            iq.attributes["id"]=ID
+        query=iq.addElement("query")
+        query.attributes["xmlns"]="jabber:iq:register"
+        form=utils.createForm(query,"form")
+        utils.addTitle(form,"J2J Registration Form")
+        uid=self.db.getIdByJid(fro.userhost())
+        if uid:
+            edit=True
+            data=self.db.getDataById(uid)
+        else:
+            edit=False
+            data=[None,None,None,None,5222]
+        if not edit:
+            utils.addLabel(form,"Please enter data for your Jabber-account")
+        else:
+            utils.addLabel(form,"Please edit data")
+        utils.addTextBox(form,"username","Username",data[0],required=True)
+        utils.addTextPrivate(form,"password","Password",data[1],required=True)
+        utils.addTextBox(form,"server","Server",data[2],required=True)
+        utils.addTextBox(form,"domain","Domain or IP",data[3])
+        utils.addTextBox(form,"port","Port",str(data[4]))
+        self.send(iq)
+
+    def setRegister(self,el,fro,ID):
+        uid=self.db.getIdByJid(fro.userhost())
+        if uid:
+            edit=True
+        else:
+            edit=False
+        if xpath.XPathQuery("/iq/query[@xmlns='jabber:iq:register']/remove").matches(el):
+            if not edit:
+                self.sendIqError(to=fro.full(), fro=config.JID, ID=ID, xmlns='jabber:iq:register', etype="cancel", condition="registration-required")
+                return
+            for j in self.clients.keys():
+                if j.find(fro.userhost()+"/")==0:
+                    if self.clients[j].connected:
+                        self.clients[j].xmlstream.sendFooter()
+                    del self.clients[j]
+            self.db.execute("DELETE from "+self.db.dbTablePrefix+"rosters WHERE id="+str(uid))
+            self.db.execute("DELETE from "+self.db.dbTablePrefix+"users_options WHERE id="+str(uid))
+            self.db.execute("DELETE from "+self.db.dbTablePrefix+"users WHERE id="+str(uid))
+            self.db.commit()
+            self.sendIqResult(fro.full(),config.JID,ID,"jabber:iq:register")
+            pres=Element((None,"presence"))
+            pres.attributes["to"]=fro.full()
+            pres.attributes["from"]=config.JID
+            pres.attributes["type"]="unsubscribe"
+            self.send(pres)
+            pres.attributes["type"]="unsubscribed"
+            self.send(pres)
+            pres.attributes["type"]="unavailable"
+            self.send(pres)
+            return
+        formXPath="/iq/query[@xmlns='jabber:iq:register']/x[@xmlns='jabber:x:data'][@type='submit']"
+        username=xpath.queryForString(formXPath+"/field[@var='username']/value",el)
+        if username=='':
+            self.sendIqError(to=fro.full(), fro=config.JID, ID=ID, xmlns='jabber:iq:register', etype="cancel", condition="not-acceptable")
+            return
+        password=xpath.XPathQuery(formXPath+"/field[@var='password']/value").queryForString(el)
+        if password=='':
+            self.sendIqError(to=fro.full(), fro=config.JID, ID=ID, xmlns='jabber:iq:register', etype="cancel", condition="not-acceptable")
+            return
+        server=xpath.XPathQuery(formXPath+"/field[@var='server']/value").queryForString(el)
+        if server=='':
+            self.sendIqError(to=fro.full(), fro=config.JID, ID=ID, xmlns='jabber:iq:register', etype="cancel", condition="not-acceptable")
+            return
+        domain=xpath.XPathQuery(formXPath+"/field[@var='domain']/value").queryForString(el)
+        port=xpath.XPathQuery(formXPath+"/field[@var='port']/value").queryForString(el)
+        try:
+            port=int(port)
+        except:
+            port=5222
+        if not edit:
+            self.db.execute("INSERT INTO "+self.db.dbTablePrefix+"users (jid,username,domain,server,password,port) VALUES ( '"+self.db.dbQuote(fro.userhost().encode('utf-8'))+"', '"+self.db.dbQuote(username.encode('utf-8'))+"', '"+self.db.dbQuote(domain.encode('utf-8'))+"', '"+self.db.dbQuote(server.encode('utf-8'))+"', '"+self.db.dbQuote(password.encode('utf-8'))+"', "+str(port)+")")
+            uid=self.db.getIdByJid(fro.userhost())
+            self.db.execute("INSERT INTO "+self.db.dbTablePrefix+"users_options ( id ) VALUES  ('"+str(uid)+"')")
+            self.db.commit()
+            self.sendIqResult(fro.full(),config.JID,ID,"jabber:iq:register")
+            pres=Element((None,"presence"))
+            pres.attributes["to"]=fro.userhost()
+            pres.attributes["from"]=config.JID
+            pres.attributes["type"]="subscribe"
+            self.send(pres)
+
+    def getLast(self,fro,ID):
+        iq = Element((None,"iq"))
+        iq.attributes["type"]="result"
+        iq.attributes["from"]=config.JID
+        iq.attributes["to"]=fro.full()
+        if ID:
+            iq.attributes["id"]=ID
+        query=iq.addElement("query")
+        query.attributes["xmlns"]="jabber:iq:last"
+        query.attributes["seconds"]=str(int(time.time()-self.startTime))
+        self.send(iq)
+
+    def getVersion(self,fro,ID):
+        iq = Element((None,"iq"))
+        iq.attributes["type"]="result"
+        iq.attributes["from"]=config.JID
+        iq.attributes["to"]=fro.full()
+        if ID:
+            iq.attributes["id"]=ID
+        query=iq.addElement("query")
+        query.attributes["xmlns"]="jabber:iq:version"
+        query.addElement("name",content="J2J Transport (http://JRuDevels.org)")
+        query.addElement("version",content=self.VERSION)
+        self.send(iq)
+
+    def getDiscoInfo(self,el,fro,ID,node):
+        iq = Element((None, "iq"))
+        iq.attributes["type"] = "result"
+        iq.attributes["from"] = config.JID
+        iq.attributes["to"] = fro.full()
+        if ID:
+            iq.attributes["id"] = ID
+        query = iq.addElement("query")
+        query.attributes["xmlns"] = "http://jabber.org/protocol/disco#info"
+        if node:
+            query.attributes["node"] = node
+        else:
+            identity=query.addElement("identity")
+            identity.attributes["name"]="J2J: XMPP-Transport"
+            identity.attributes["category"]="gateway"
+            identity.attributes["type"]="XMPP"
+            query.addElement("feature").attributes["var"]="jabber:iq:register"
+            query.addElement("feature").attributes["var"]="jabber:iq:last"
+            query.addElement("feature").attributes["var"]="jabber:iq:version"
+        self.send(iq)
+        
+    def getDiscoItems(self,el,fro,ID,node):
+        iq = Element((None,"iq"))
+        iq.attributes["type"] = "result"
+        iq.attributes["from"] = config.JID
+        iq.attributes["to"] = fro.full()
+        if ID:
+            iq.attributes["id"] = ID
+        query = iq.addElement("query")
+        query.attributes["xmlns"] = "http://jabber.org/protocol/disco#items"
+        if node:
+            query.attributes["node"] = node
+            
+        self.send(iq)
+
+    def sendIqResult(self, to, fro, ID, xmlns):
+        el = Element((None,"iq"))
+        el.attributes["to"] = to
+        el.attributes["from"] = fro
+        if ID:
+            el.attributes["id"] = ID
+            el.attributes["type"] = "result"
+            self.send(el)
+
+    def sendIqError(self, to, fro, ID, xmlns, etype, condition):
+        el = Element((None, "iq"))
+        el.attributes["to"] = to
+        el.attributes["from"] = fro
+        if ID:
+            el.attributes["id"] = ID
+            el.attributes["type"] = "error"
+            error = el.addElement("error")
+            error.attributes["type"] = etype
+            error.attributes["code"] = str(utils.errorCodeMap[condition])
+            cond = error.addElement(condition)
+            self.send(el)
+
+    def sendPresenceError(self, to, fro, etype, condition):
+        el = Element((None, "presence"))
+        el.attributes["to"] = to
+        el.attributes["from"] = fro
+        el.attributes["type"] = "error"
+        error = el.addElement("error")
+        error.attributes["type"] = etype
+        error.attributes["code"] = str(utils.errorCodeMap[condition])
+        cond=error.addElement(condition)
+        self.send(el)
+
+c=j2jComponent(reactor)
+f=component.componentFactory(config.JID,config.PASSWORD)
+connector = component.buildServiceManager(config.JID, config.PASSWORD, "tcp:%s:%s" % (config.HOST, config.PORT))
+c.setServiceParent(connector)
+connector.startService()
+reactor.run()
