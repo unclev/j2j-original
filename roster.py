@@ -23,6 +23,19 @@ class roster:
         item.append(groups)
         return (cjid,item)
 
+    def getGroups(self):
+        groups=[]
+        alreadyUndefined=False
+        for contact in self.items.keys():
+            if self.items[contact][2]==[] and not alreadyUndefined:
+                groups.append(u"Undefined")
+                alreadyUndefined=True
+            else:
+                for group in self.items[contact][2]:
+                    if not group in groups:
+                        groups.append(group)
+        return groups
+
     def onIq(self,el):
         iqType=el.attributes["type"]
         if not iqType in ["set","result"]: return
