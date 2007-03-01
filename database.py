@@ -30,6 +30,13 @@ class database:
     def commit(self):
         self.db.commit()
 
+    def getCount(self,table,where=None):
+        if where==None:
+            where=''
+        else:
+            where="WHERE "+where
+        return self.fetchone("SELECT count(*) FROM %s %s" % (self.dbTablePrefix+table,where))[0]
+
     def getIdByJid(self,qjid):
         a=self.fetchone("SELECT id from "+self.dbTablePrefix+"users WHERE jid='"+self.dbQuote(qjid.encode("utf-8"))+"'")
         if a==None:
