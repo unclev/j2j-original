@@ -1,3 +1,4 @@
+import types
 import sys
 import utils
 from config import config
@@ -173,6 +174,16 @@ class Client(object):
             for node in nodes:
                 if node.attributes.has_key("jid"):
                     node.attributes["jid"]=utils.quoteJID(node.attributes["jid"])
+        if xpath.XPathQuery('/iq/query[@xmlns="jabber:iq:gateway"]/jid').matches(el):
+            nodes=xpath.XPathQuery('/iq[@type="result"]/query[@xmlns="jabber:iq:gateway"]').queryForNodes(el)
+            if nodes:
+                for node in nodes:
+                    ujid=''
+                    for jnode in node.elements():
+                        if jnode.name=="jid": ujid=unicode(jnode)
+                    node.children=[]
+                    node.addElement("jid",content=utils.quoteJID(ujid))
+
         self.route(el)
 
     def route(self,el):
