@@ -44,6 +44,9 @@ class ClientFactory(xmlstream.XmlStreamFactory):
 
 class Client(object):
     def __init__(self, el, reactor, component, host_jid, client_jid, server, secret, port=5222):
+        self.presences = {}
+        self.presences_available = []
+        self.presences_available_full = []
         self.component=component
         self.connected=False
         self.host_jid=host_jid
@@ -86,6 +89,18 @@ class Client(object):
             presence.attributes['type']='unavailable'
             presence.addElement('status',content="Disconnected")
             self.component.send(presence)
+        uid=self.component.db.getIdByJid(self.host_jid.userhost())
+        if (self.presences_available_full!=[] or self.presences!={}) and uid:
+            unPres=Element((None,"presence"))
+            unPres.attributes["to"]=self.host_jid.full()
+            unPres.attributes["type"]="unavailable"
+            for ojid in self.presences_available_full:
+                unPres.attributes["from"]=utils.quoteJID(ojid)
+                self.component.send(unPres)
+            for ojid in self.presences.keys():
+                if self.component.db.getCount('rosters',"id='%s' AND jid='%s'" % (str(uid),ojid.split("/")[0].encode('utf-8'))):
+                    unPres.attributes["from"]=utils.quoteJID(ojid)
+                    self.component.send(unPres)
         self.component.deleteClient(self.host_jid)
 
     def onAuthenticated(self, xs):
@@ -101,13 +116,14 @@ class Client(object):
 
         self.xmlstream.addObserver("/iq/query[@xmlns='jabber:iq:roster']",self.roster.onIq)
         self.xmlstream.addObserver("/message",self.onMessage)
+        self.xmlstream.addObserver("/presence",self.onPresence)
         self.xmlstream.addObserver("/iq",self.onIq)
 
 
         self.startPresence.attributes={}
 
-        self.startPresence.uri=None
-        self.startPresence.defaultUri=None
+        if self.startPresence.attributes.has_key("xmlns"):
+            del self.startPresence["xmlns"]
 
         xs.send(self.startPresence)
         del self.startPresence
@@ -120,6 +136,32 @@ class Client(object):
         xs.send(rosterReq)
 
     def onMessage(self,el):
+        self.route(el)
+
+    def onPresence(self,el):
+        fro = el.getAttribute("from")
+        to = el.getAttribute("to")
+        presType = el.getAttribute("type")
+        try:
+            fro=internJID(fro)
+            to=internJID(to)
+        except:
+            return
+        uid=self.component.db.getIdByJid(self.host_jid.userhost())
+        if not uid: return
+        isInRoster=self.component.db.getCount("rosters","id='%s' AND jid='%s'" % (str(uid),self.component.db.dbQuote(fro.userhost().encode('utf-8'))))
+        if presType=="available" or presType==None:
+            self.presences[fro.full()]=el
+            if isInRoster==0 and (not fro.userhost() in self.presences_available):
+                return
+        elif presType=="unavailable":
+            if self.presences.has_key(fro.full()):
+                del self.presences[fro.full()]
+            if isInRoster==0 and (not fro.userhost() in self.presences_available):
+                return
+        elif presType=="error":
+            if isInRoster==0 and (not fro.userhost() in self.presences_available):
+                return
         self.route(el)
 
     def onIq(self,el):
@@ -138,6 +180,8 @@ class Client(object):
             return
         el.attributes["from"]=utils.quoteJID(fro.full())
         el.attributes["to"]=self.host_jid.full()
+        if el.attributes.has_key("xmlns"):
+            del el.attributes["xmlns"]
         self.component.send(el)
 
     def send(self, el):
