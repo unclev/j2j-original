@@ -482,6 +482,9 @@ class j2jComponent(component.Service):
         query.attributes["xmlns"] = "http://jabber.org/protocol/disco#info"
         if node:
             query.attributes["node"] = node
+            if node.startswith("groster") and self.clients.has_key(fro.full()):
+                query.addElement("feature").attributes["var"]="http://jabber.org/protocol/disco#items"
+                query.addElement("feature").attributes["var"]="http://jabber.org/protocol/disco#info"
         else:
             identity=query.addElement("identity")
             identity.attributes["name"]="J2J: XMPP-Transport"
@@ -508,7 +511,19 @@ class j2jComponent(component.Service):
         query.attributes["xmlns"] = "http://jabber.org/protocol/disco#items"
         if node:
             query.attributes["node"] = node
-            
+        if node==None:
+            if self.clients.has_key(fro.full()):
+                utils.addDiscoItem(query,utils.quoteJID(self.clients[fro.full()].client_jid.host),"Guest's server Discovery")
+                utils.addDiscoItem(query,config.JID,"Guest roster","groster")
+        elif node=="groster" and self.clients.has_key(fro.full()):
+            groups = self.clients[fro.full()].roster.getGroups()
+            for group in groups:
+                utils.addDiscoItem(query,config.JID,group,"groster/"+group)
+        elif node.startswith("groster/") and self.clients.has_key(fro.full()):
+            group=node[8:]
+            contacts=self.clients[fro.full()].roster.getAllInGroup(group)
+            for contact in contacts:
+                utils.addDiscoItem(query,contact[0],contact[1])
         self.send(iq)
 
     def sendIqResult(self, to, fro, ID, xmlns):
