@@ -9,3 +9,5 @@ class config:
     DB_NAME="j2j"
     DB_PASS="dbsecret"
     DB_PREFIX="j2j_"
+
+    ADMINS=[]
