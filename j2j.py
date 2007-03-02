@@ -1,7 +1,9 @@
 import md5
 from config import config
 from client import Client
+from adhoc import adHoc
 import time
+import os
 import sys
 import codecs #!
 import utils
@@ -21,6 +23,7 @@ class j2jComponent(component.Service):
 
     def __init__(self,reactor):
         self.reactor=reactor
+        self.adhoc=adHoc(self)
 
     def componentConnected(self, xs):
         self.startTime = time.time()
@@ -253,6 +256,10 @@ class j2jComponent(component.Service):
                 self.getvcard(fro,ID)
                 return
 
+            if xmlns=="http://jabber.org/protocol/commands" and query.name=="command" and iqType=="set":
+                self.adhoc.onCommand(query,fro,ID,node)
+                return
+
             if xmlns=="http://jabber.org/protocol/stats":
                 self.getStats(el,fro,ID)
                 return
@@ -482,6 +489,23 @@ class j2jComponent(component.Service):
         query.attributes["xmlns"] = "http://jabber.org/protocol/disco#info"
         if node:
             query.attributes["node"] = node
+            if node=='http://jabber.org/protocol/commands':
+                identity=query.addElement("identity")
+                identity.attributes["name"]="Commands"
+                identity.attributes["category"]="automation"
+                identity.attributes["type"]="command-list"
+            if node in self.adhoc.commands.keys():
+                if self.adhoc.commands[node][3]:
+                    uid=self.db.getIdByJid(fro.userhost())
+                    if not uid:
+                        self.sendIqError(to=fro.full(), fro=config.JID, ID=ID, xmlns='http://jabber.org/protocol/disco#info', etype="cancel", condition="not-authorized")
+                        return
+                identity=query.addElement("identity")
+                identity.attributes["name"]=self.adhoc.commands[node][0]
+                identity.attributes["category"]="automation"
+                identity.attributes["type"]="command-node"
+                query.addElement("feature").attributes["var"]="http://jabber.org/protocol/commands"
+                query.addElement("feature").attributes["var"]="jabber:x:data"
             if node.startswith("groster") and self.clients.has_key(fro.full()):
                 query.addElement("feature").attributes["var"]="http://jabber.org/protocol/disco#items"
                 query.addElement("feature").attributes["var"]="http://jabber.org/protocol/disco#info"
@@ -491,6 +515,7 @@ class j2jComponent(component.Service):
             identity.attributes["category"]="gateway"
             identity.attributes["type"]="XMPP"
             query.addElement("feature").attributes["var"]="vcard-temp"
+            query.addElement("feature").attributes["var"]="http://jabber.org/protocol/commands"
             query.addElement("feature").attributes["var"]="http://jabber.org/protocol/stats"
             query.addElement("feature").attributes["var"]="http://jabber.org/protocol/disco#items"
             query.addElement("feature").attributes["var"]="http://jabber.org/protocol/disco#info"
@@ -499,7 +524,7 @@ class j2jComponent(component.Service):
             query.addElement("feature").attributes["var"]="jabber:iq:last"
             query.addElement("feature").attributes["var"]="jabber:iq:version"
         self.send(iq)
-        
+
     def getDiscoItems(self,el,fro,ID,node):
         iq = Element((None,"iq"))
         iq.attributes["type"] = "result"
@@ -512,6 +537,7 @@ class j2jComponent(component.Service):
         if node:
             query.attributes["node"] = node
         if node==None:
+            utils.addDiscoItem(query,config.JID,"Commands",'http://jabber.org/protocol/commands')
             if self.clients.has_key(fro.full()):
                 utils.addDiscoItem(query,utils.quoteJID(self.clients[fro.full()].client_jid.host),"Guest's server Discovery")
                 utils.addDiscoItem(query,config.JID,"Guest roster","groster")
@@ -524,6 +550,14 @@ class j2jComponent(component.Service):
             contacts=self.clients[fro.full()].roster.getAllInGroup(group)
             for contact in contacts:
                 utils.addDiscoItem(query,contact[0],contact[1])
+        elif node=="http://jabber.org/protocol/commands":
+            self.adhoc.getCommandsList(query)
+        elif node in self.adhoc.commands.keys():
+            if self.adhoc.commands[node][3]:
+                uid=self.db.getIdByJid(fro.userhost())
+                if not uid:
+                    self.sendIqError(to=fro.full(), fro=config.JID, ID=ID, xmlns='http://jabber.org/protocol/disco#items', etype="cancel", condition="not-authorized")
+                    return
         self.send(iq)
 
     def sendIqResult(self, to, fro, ID, xmlns):
@@ -546,6 +580,7 @@ class j2jComponent(component.Service):
             error.attributes["type"] = etype
             error.attributes["code"] = str(utils.errorCodeMap[condition])
             cond = error.addElement(condition)
+            cond.attributes["xmlns"]="urn:ietf:params:xml:ns:xmpp-stanzas"
             self.send(el)
 
     def sendPresenceError(self, to, fro, etype, condition):
@@ -557,7 +592,20 @@ class j2jComponent(component.Service):
         error.attributes["type"] = etype
         error.attributes["code"] = str(utils.errorCodeMap[condition])
         cond=error.addElement(condition)
+        cond.attributes["xmlns"]="urn:ietf:params:xml:ns:xmpp-stanzas"
         self.send(el)
+
+#def kill(a,b):
+    #print "!"
+    #for client in self.clients.keys():
+        #if self.clients[client].connected:
+            #self.clients[client].xmlstream.sendFooter()
+        #else:
+            #self.clients[client].disconnect=True
+
+#if os.name == "posix":
+    #import signal
+    #signal.signal(signal.SIGTERM, kill)
 
 c=j2jComponent(reactor)
 f=component.componentFactory(config.JID,config.PASSWORD)
