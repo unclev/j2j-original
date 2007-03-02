@@ -19,7 +19,7 @@ sys.setdefaultencoding("utf-8")
 sys.stdout = codecs.lookup('utf-8')[-1](sys.stdout)
 
 class j2jComponent(component.Service):
-    VERSION="0.0.1"
+    VERSION="0.1.2"
 
     def __init__(self,reactor):
         self.reactor=reactor
@@ -184,6 +184,8 @@ class j2jComponent(component.Service):
                 j2jh.defaultUri="j2j:history"
                 j2jh.attributes["hops"]="1"
                 j2jh.addElement("jid",content=md5.md5(fro.full().encode("utf-8")).hexdigest())
+            del el.uri
+            del el.defaultUri
             presence=Element((None,'presence'))
             presence.attributes['to']=fro.full()
             presence.attributes['from']=config.JID
