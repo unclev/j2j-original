@@ -198,6 +198,13 @@ class Client(object):
         el.attributes["to"]=self.host_jid.full()
         if el.attributes.has_key("xmlns"):
             del el.attributes["xmlns"]
+        uid=self.component.db.getIdByJid(self.host_jid.userhost())
+        if not uid: return
+        opts=self.component.db.getOptsById(uid)
+        if el.name=="message" or el.name=="iq":
+            if opts[3]:
+                if not (fro.userhost() in self.roster.items.keys()):
+                    return
         self.component.send(el)
 
     def send(self, el):
