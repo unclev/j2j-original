@@ -47,4 +47,7 @@ class database:
         return self.fetchone("SELECT username,password,server,domain,port from "+self.dbTablePrefix+"users WHERE id="+str(uid))
 
     def getOptsById(self,uid):
-        return self.fetchone("SELECT replytext,lightnotify,autoreplybutforward,onlyroster,autoreplyenabled from "+self.dbTablePrefix+"users_options WHERE id="+str(uid))
+        data=self.fetchone("SELECT replytext,lightnotify,autoreplybutforward,onlyroster,autoreplyenabled from "+self.dbTablePrefix+"users_options WHERE id="+str(uid))
+        if data[0]==None:
+            data[0]=''
+        return data
