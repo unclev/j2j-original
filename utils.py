@@ -62,6 +62,14 @@ def unquoteJID(qjid):
         ujid=ujid+'/'+els[2]
     return ujid
 
+def createCommand(iq,node,status,sid):
+    command=iq.addElement("command")
+    command.attributes["xmlns"]="http://jabber.org/protocol/commands"
+    command.attributes["node"]=node
+    command.attributes["status"]=status
+    command.attributes["sessionid"]=sid
+    return command
+
 def createForm(iq,formType):
     form=iq.addElement("x")
     form.attributes["xmlns"]="jabber:x:data"
