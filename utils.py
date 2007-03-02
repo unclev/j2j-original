@@ -126,3 +126,7 @@ def addMemo(form,name,caption,value):
     for string in value.splitlines():
         value=Memo.addElement("value",content=string)
     return Memo
+
+def strToBool(string):
+    if string=="0":return False
+    return True
