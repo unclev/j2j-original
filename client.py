@@ -25,7 +25,6 @@ class ClientFactory(xmlstream.XmlStreamFactory):
         self.host=host
         xmlstream.XmlStreamFactory.__init__(self,a)
         self.maxRetries=1
-        self.xmlstream=None
 
     def clientConnectionFailed(self, connector, reason):
         error="remote-server-not-found"
@@ -46,6 +45,7 @@ class ClientFactory(xmlstream.XmlStreamFactory):
 
 class Client(object):
     def __init__(self, el, reactor, component, host_jid, client_jid, server, secret, port=5222):
+        self.xmlstream=None
         self.presences = {}
         self.presences_available = []
         self.presences_available_full = []
