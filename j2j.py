@@ -530,7 +530,7 @@ class j2jComponent(component.Service):
                 identity.attributes["type"]="command-node"
                 query.addElement("feature").attributes["var"]="http://jabber.org/protocol/commands"
                 query.addElement("feature").attributes["var"]="jabber:x:data"
-            if node.startswith("groster") and self.clients.has_key(fro.full()):
+            if (node.startswith("groster") and self.clients.has_key(fro.full())) or (node.startswith("users") and fro.userhost() in config.ADMINS):
                 query.addElement("feature").attributes["var"]="http://jabber.org/protocol/disco#items"
                 query.addElement("feature").attributes["var"]="http://jabber.org/protocol/disco#info"
         else:
@@ -563,6 +563,8 @@ class j2jComponent(component.Service):
         if node==None:
             utils.addDiscoItem(query,config.JID,"Commands",'http://jabber.org/protocol/commands')
             self.adhoc.getCommandsList(query)
+            if fro.userhost() in config.ADMINS:
+                utils.addDiscoItem(query,config.JID,"Users",'users')
             if self.clients.has_key(fro.full()):
                 utils.addDiscoItem(query,utils.quoteJID(self.clients[fro.full()].client_jid.host),"Guest's server Discovery")
                 utils.addDiscoItem(query,config.JID,"Guest roster","groster")
@@ -570,6 +572,11 @@ class j2jComponent(component.Service):
             groups = self.clients[fro.full()].roster.getGroups()
             for group in groups:
                 utils.addDiscoItem(query,config.JID,group,"groster/"+group)
+        elif node=="users" and (fro.userhost() in config.ADMINS):
+            utils.addDiscoItem(query,config.JID,"Online users",'users/online')
+        elif node=="users/online" and (fro.userhost() in config.ADMINS):
+            for user in self.clients.keys():
+                utils.addDiscoItem(query,user)
         elif node.startswith("groster/") and self.clients.has_key(fro.full()):
             group=node[8:]
             contacts=self.clients[fro.full()].roster.getAllInGroup(group)
