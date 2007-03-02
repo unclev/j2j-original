@@ -196,9 +196,14 @@ class Client(object):
         except:
             return
         el.attributes["from"]=utils.quoteJID(fro.full())
-        el.attributes["to"]=self.host_jid.full()
+        if to.full()==to.userhost():
+            el.attributes["to"]=self.host_jid.userhost()
+        else:
+            el.attributes["to"]=self.host_jid.full()
         if el.attributes.has_key("xmlns"):
             del el.attributes["xmlns"]
+        del el.uri
+        del el.defaultUri
         uid=self.component.db.getIdByJid(self.host_jid.userhost())
         if not uid: return
         opts=self.component.db.getOptsById(uid)
