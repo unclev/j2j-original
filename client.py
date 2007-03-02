@@ -201,7 +201,9 @@ class Client(object):
         self.component.send(el)
 
     def send(self, el):
+        if not self.xmlstream: return False
         self.xmlstream.send(el)
+        return True
 
     def onInitFailed(self, failure):
         if failure.check(ConnectionDone):
