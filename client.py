@@ -48,6 +48,7 @@ class Client(object):
         self.presences = {}
         self.presences_available = []
         self.presences_available_full = []
+        self.alreadyReply = []
         self.component=component
         self.connected=False
         self.host_jid=host_jid
@@ -201,10 +202,28 @@ class Client(object):
         uid=self.component.db.getIdByJid(self.host_jid.userhost())
         if not uid: return
         opts=self.component.db.getOptsById(uid)
-        if el.name=="message" or el.name=="iq":
-            if opts[3]:
-                if not (fro.userhost() in self.roster.items.keys()):
-                    return
+        if opts[3] and (el.name=="message" or el.name=="iq"):
+            if not (fro.userhost() in self.roster.items.keys()):
+                return
+        if opts[4]:
+            flag=False
+            if el.name=="message": flag=True
+            if el.name=="subscribe" and el.getAttribute("type")=="subscribe":
+                flag=True
+                pres=Element((None,"presence"))
+                pres.attributes["to"]=fro.userhost()
+                pres.attributes["type"]="unsubscribed"
+                self.send(pres)
+            if (not fro.full() in self.alreadyReply) and flag:
+                msg=Element((None,"message"))
+                msg.attributes["to"]=fro.full()
+                msg.attributes["type"]="normal"
+                msg.addElement("subject",content="J2J Auto Reply Service")
+                msg.addElement("body",content=opts[0])
+                self.send(msg)
+                self.alreadyReply.append(fro.full())
+            if not opts[2]:
+                return
         self.component.send(el)
 
     def send(self, el):
