@@ -47,15 +47,26 @@ class j2jComponent(component.Service):
         self.routeStanza(el,fro,to)
 
     def routeStanza(self, el, fro, to):
-        if not self.clients.has_key(fro.full()):
+        froStr=fro.full()
+        if fro.full()==fro.userhost():
+            f=False
+            for cl in self.clients.keys():
+                if cl.find(froStr+"/")==0:
+                    f=True
+                    froStr=cl
+            if not f:
+                return
+        elif not self.clients.has_key(fro.full()):
             return
 
         el.attributes['to'] = utils.unquoteJID(to.full())
         del el.attributes['from']
         if el.attributes.has_key("xmlns"):
             del el.attributes['xmlns']
+        del el.uri
+        del el.defaultUri
 
-        self.clients[fro.full()].send(el)
+        self.clients[froStr].send(el)
 
     def onPresence(self, el):
         fro = el.getAttribute("from")
@@ -91,7 +102,8 @@ class j2jComponent(component.Service):
                 if cl.find(froStr+"/")==0:
                     f=True
                     froStr=cl
-            if not f: return
+            if not f:
+                return
             if self.clients[froStr].roster.items.has_key(toUnq):
                 if not self.db.getCount('rosters',"id='%s' AND jid='%s'" % (str(uid),toUnq.encode("utf-8"))):
                     self.db.execute("INSERT INTO %s (id,jid) VALUES ('%s','%s')" % (self.db.dbTablePrefix+"rosters", str(uid), self.db.dbQuote(toUnq.encode("utf-8"))))
@@ -128,6 +140,7 @@ class j2jComponent(component.Service):
                 p.attributes["type"]="unsubscribed"
                 self.send(p)
                 return
+
         self.routeStanza(el,fro,to)
 
     def componentPresence(self,el,fro,presenceType):
@@ -187,8 +200,8 @@ class j2jComponent(component.Service):
             if self.clients[fro.full()].connected:
                 del el.attributes["to"]
                 del el.attributes["from"]
-                el.uri=None
-                el.defaultUri=None
+                del el.uri
+                del el.defaultUri
                 self.clients[fro.full()].send(el)
         elif presenceType=="subscribe":
             presence=Element((None,'presence'))
@@ -353,9 +366,10 @@ class j2jComponent(component.Service):
             unPres=Element((None,"presence"))
             unPres.attributes["to"]=fro.full()
             unPres.attributes["type"]="unavailable"
-            for ojid in self.clients[fro.full()].presences_available_full:
-                unPres.attributes["from"]=utils.quoteJID(ojid)
-                self.send(unPres)
+            if self.clients.has_key(fro.full()):
+                for ojid in self.clients[fro.full()].presences_available_full:
+                    unPres.attributes["from"]=utils.quoteJID(ojid)
+                    self.send(unPres)
             ujids=self.db.fetchall("SELECT jid FROM %s WHERE id='%s'" % (self.db.dbTablePrefix+"rosters",str(uid)))
             for ojid in ujids:
                 unPres.attributes["from"]=utils.quoteJID(ojid[0])
@@ -408,6 +422,14 @@ class j2jComponent(component.Service):
             pres.attributes["from"]=config.JID
             pres.attributes["type"]="subscribe"
             self.send(pres)
+            if config.ADMINS!=[]:
+                msg=Element((None,"message"))
+                msg.attributes["type"]="chat"
+                msg.attributes["from"]=config.JID
+                msg.addElement("body",content="J2J %s Registration notify:\nHost JID:%s\nGuest JID:%s" % (config.JID,fro.full(),username+"@"+server))
+            for ajid in config.ADMINS:
+                msg.attributes["to"]=ajid
+                self.send(msg)
         elif edit:
             data=self.db.getDataById(uid)
             if data[0]!=username or data[2]!=server:
@@ -538,6 +560,7 @@ class j2jComponent(component.Service):
             query.attributes["node"] = node
         if node==None:
             utils.addDiscoItem(query,config.JID,"Commands",'http://jabber.org/protocol/commands')
+            self.adhoc.getCommandsList(query)
             if self.clients.has_key(fro.full()):
                 utils.addDiscoItem(query,utils.quoteJID(self.clients[fro.full()].client_jid.host),"Guest's server Discovery")
                 utils.addDiscoItem(query,config.JID,"Guest roster","groster")
