@@ -45,7 +45,7 @@ class adHoc:
     def getStat(self,iq,fro,ID):
         command=utils.createCommand(iq,"stat","completed",self.getSid())
         form=utils.createForm(command,"result")
-        itils.addTitle(form,"J2J Statistics")
+        utils.addTitle(form,"J2J Statistics")
         utils.addLabel(form,"J2J Statistics")
         utils.addLabel(form,"Online Users: "+str(len(self.component.clients.keys())))
         utils.addLabel(form,"Total Users: "+str(self.component.db.getCount("users")))
