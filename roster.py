@@ -63,7 +63,7 @@ class roster:
         if iqType=="set":
             result=Element((None,"iq"))
             result.attributes["type"]="result"
-            result.attributes["id"]=el.attributes["id"]
-            result.attributes["to"]=el.attributes["to"]
-            result.attributes["from"]=el.attributes["from"]
+            result.attributes["id"]=el.getAttribute("id")
+            result.attributes["to"]=el.getAttribute("from")
+            result.attributes["from"]=el.getAttribute("to")
             self.host.xmlstream.send(result)
