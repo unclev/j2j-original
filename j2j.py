@@ -161,6 +161,8 @@ class j2jComponent(component.Service):
         newmd5=md5.md5(newjid).hexdigest()
         if not self.clients.has_key(fro.full()) and (presenceType=="available" or presenceType==None):
             js=[]
+            del el.defaultUri
+            del el.uri
             for element in el.elements():
                 if element.name=="x" and element.uri=="j2j:history":
                     try:
@@ -180,12 +182,9 @@ class j2jComponent(component.Service):
                 return
             if js==[]:
                 j2jh=el.addElement("x")
-                j2jh.uri="j2j:history"
-                j2jh.defaultUri="j2j:history"
+                j2jh.attributes["xmlns"]="j2j:history"
                 j2jh.attributes["hops"]="1"
                 j2jh.addElement("jid",content=md5.md5(fro.full().encode("utf-8")).hexdigest())
-            del el.uri
-            del el.defaultUri
             presence=Element((None,'presence'))
             presence.attributes['to']=fro.full()
             presence.attributes['from']=config.JID
@@ -213,7 +212,8 @@ class j2jComponent(component.Service):
             self.send(presence)
 
     def deleteClient(self,jid):
-        del self.clients[jid.full()]
+        if self.clients.has_key(jid.full()):
+            del self.clients[jid.full()]
 
     def onIq(self, el):
         fro = el.getAttribute("from")
