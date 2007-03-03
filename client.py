@@ -365,7 +365,7 @@ class Client(object):
                         x.addElement("url",content=a[4])
                         self.component.send(msg)
 
-            if firstTime and options[1]:
+            if firstTime and options[1] and total>0:
                 msg=Element((None,"message"))
                 msg.attributes["from"]=config.JID
                 msg.attributes["to"]=self.host_jid.full()
