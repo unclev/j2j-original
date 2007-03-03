@@ -56,10 +56,16 @@ class adHoc:
         if not uid:
             return
         opts=self.component.db.getOptsById(uid)
+        gtalk=False
+        if fro.full() in self.component.clients.keys():
+            gtalk=self.component.clients[fro.full()].isGTalk
         command=utils.createCommand(iq,"options","executing",self.getSid())
         form=utils.createForm(command,"form")
         utils.addTitle(form,"J2J Options and Settings")
         utils.addCheckBox(form,"onlyRoster","Receive messages only from contacts from Guest roster",opts[3])
+        if gtalk:
+            utils.addLabel(form,"GTalk's Settings:")
+            utils.addCheckBox(form,"lightNotify","Light first mail-notify",opts[1])
         utils.addLabel(form,"Auto Reply Settings")
         utils.addCheckBox(form,"autoReplyEnabled","Enable Auto Reply for ALL guest contacts",opts[4])
         utils.addCheckBox(form,"autoReplyButForward","Always forward messages to me",opts[2])
@@ -82,6 +88,9 @@ class adHoc:
         autoReplyButForward=xpath.XPathQuery(xPathStr+"/field[@var='autoReplyButForward']/value").queryForString(el)
         if autoReplyButForward:
             opts[2]=utils.strToBool(autoReplyButForward)
+        lightNotify=xpath.XPathQuery(xPathStr+"/field[@var='lightNotify']/value").queryForString(el)
+        if lightNotify:
+            opts[1]=utils.strToBool(lightNotify)
         replyText=xpath.XPathQuery(xPathStr+"/field[@var='replyText']/value").queryForStringList(el)
         if replyText:
             rT=''
@@ -90,6 +99,6 @@ class adHoc:
             rT=rT[:-1]
             rT=rT[:1000]
             opts[0]=rT
-        self.component.db.execute("UPDATE %s SET onlyroster='%s', autoreplyenabled='%s', autoreplybutforward='%s', replytext='%s' WHERE id='%s'" % (self.component.db.dbTablePrefix+"users_options",str(opts[3]),str(opts[4]),str(opts[2]),self.component.db.dbQuote(opts[0]),str(uid)))
+        self.component.db.execute("UPDATE %s SET onlyroster='%s', autoreplyenabled='%s', autoreplybutforward='%s', replytext='%s', lightnotify='%s' WHERE id='%s'" % (self.component.db.dbTablePrefix+"users_options",str(opts[3]),str(opts[4]),str(opts[2]),self.component.db.dbQuote(opts[0]),str(opts[1]),str(uid)))
         self.component.db.commit()
         self.component.send(iq)
