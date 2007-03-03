@@ -19,7 +19,7 @@ sys.setdefaultencoding("utf-8")
 sys.stdout = codecs.lookup('utf-8')[-1](sys.stdout)
 
 class j2jComponent(component.Service):
-    VERSION="0.1.2"
+    VERSION="0.1.3"
 
     def __init__(self,reactor):
         self.reactor=reactor
