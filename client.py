@@ -1,6 +1,8 @@
 import types
 import sys
 import utils
+import urllib2
+from urllib import urlencode
 from config import config
 from roster import roster
 from twisted.names.error import DNSNameError
@@ -10,10 +12,107 @@ from twisted.words.xish import domish,xpath
 from twisted.words.protocols.jabber import xmlstream, client, jid
 from twisted.words.xish.domish import Element
 from twisted.words.protocols.jabber.jid import internJID
-from twisted.internet import threads
+from twisted.internet import threads,defer,reactor
 from twisted.words.protocols.jabber.xmlstream import FeatureNotAdvertized
 from twisted.words.protocols.jabber.error import StanzaError
-from twisted.words.protocols.jabber.sasl import SASLNoAcceptableMechanism,SASLAuthError
+from twisted.words.protocols.jabber.sasl import SASLNoAcceptableMechanism,SASLAuthError,get_mechanisms,sasl_mechanisms
+from twisted.words.protocols.jabber.sasl_mechanisms import ISASLMechanism
+from twisted.words.protocols.jabber import sasl
+from twisted.words.protocols.jabber.client import CheckVersionInitializer,BindInitializer,SessionInitializer
+import twisted.words.protocols.jabber.client
+from zope.interface import implements
+import twisted.web.client
+
+class XMPPAndGoogleAuthenticator(client.XMPPAuthenticator):
+    def __init__(self,jid,password,client):
+        self.client=client
+        twisted.words.protocols.jabber.client.XMPPAuthenticator.__init__(self,jid,password)
+
+    def associateWithStream(self, xs):
+        xmlstream.ConnectAuthenticator.associateWithStream(self, xs)
+
+        xs.initializers = [CheckVersionInitializer(xs)]
+        inits = [ (xmlstream.TLSInitiatingInitializer, False,False),
+                  (SASLAndXGoogleToken, True,True),
+                  (BindInitializer, False,False),
+                  (SessionInitializer, False,False),
+                ]
+
+        for initClass, required, isGoogleClass in inits:
+            if not isGoogleClass:
+                init = initClass(xs)
+            else:
+                init = initClass(xs,self.client)
+            init.required = required
+            xs.initializers.append(init)
+
+class SASLAndXGoogleToken(sasl.SASLInitiatingInitializer):
+    def __init__(self,xs,client):
+        self.client=client
+        sasl.SASLInitiatingInitializer.__init__(self,xs)
+
+    def start(self):
+        jid = self.xmlstream.authenticator.jid
+        password = self.xmlstream.authenticator.password
+
+        mechanisms = get_mechanisms(self.xmlstream)
+
+        if 'X-GOOGLE-TOKEN' in mechanisms:
+            self.mechanism = XGoogleToken(jid.userhost(),password,self)
+            self.client.isGTalk=True
+        elif 'DIGEST-MD5' in mechanisms:
+            self.mechanism = sasl_mechanisms.DigestMD5('xmpp', jid.host, None,
+                                                       jid.user, password)
+        elif 'PLAIN' in mechanisms:
+            self.mechanism = sasl_mechanisms.Plain(None, jid.user, password)
+        else:
+            return defer.fail(SASLNoAcceptableMechanism)
+
+        self._deferred = defer.Deferred()
+        self.xmlstream.addObserver('/challenge', self.onChallenge)
+        self.xmlstream.addOnetimeObserver('/success', self.onSuccess)
+        self.xmlstream.addOnetimeObserver('/failure', self.onFailure)
+        if not self.client.isGTalk:
+            self.sendAuth(self.mechanism.getInitialResponse())
+        else:
+            self.mechanism.getInitialResponse()
+        return self._deferred
+
+class XGoogleToken(object):
+    implements(ISASLMechanism)
+    name='X-GOOGLE-TOKEN'
+    def __init__(self,login,password,host):
+        self.login=login
+        self.password=password
+        self.host=host
+
+    def getInitialResponse(self):
+        lib=urlencode({"Email": self.login, "Passwd": self.password, "PersistentCookie": "false", "source": "googletalk"})
+        defr=twisted.web.client.getPage("https://google.com/accounts/ClientAuth",method="POST",postdata=lib,headers={"Content-Type": "application/x-www-form-urlencoded"})
+        defr.addCallback(self.firstDefer)
+        defr.addErrback(self.firstDefer)
+        return
+
+    def firstDefer(self,respond):
+        try:
+            if respond.find("Error")==0:
+                return self.secondDefer("Error")
+        except:
+                return self.secondDefer("Error")
+
+        pars=respond.split("\n")
+        SID=pars[0]
+        LSID=pars[1]
+
+        lib=urlencode({"SID": SID[4:], "LSID": LSID[5:], "service": "mail", "Session": "true"})
+
+        defr=twisted.web.client.getPage("https://google.com/accounts/IssueAuthToken",method="POST",postdata=lib,headers={"Content-Type": "application/x-www-form-urlencoded"})
+        defr.addCallback(self.secondDefer)
+        defr.addErrback(self.secondDefer)
+        return
+
+    def secondDefer(self,respond):
+        self.host.sendAuth("\x00%s\x00%s" % (self.login,respond.splitlines()[0]))
 
 class XMPPClientConnector(SRVConnector):
     def __init__(self, reactor, domain, factory, port=5222):
@@ -46,6 +145,7 @@ class ClientFactory(xmlstream.XmlStreamFactory):
 class Client(object):
     def __init__(self, el, reactor, component, host_jid, client_jid, server, secret, port=5222):
         self.xmlstream=None
+        self.isGTalk=False
         self.presences = {}
         self.presences_available = []
         self.presences_available_full = []
@@ -61,7 +161,9 @@ class Client(object):
         self.disconnect=False
         self.error=False
         self.secret=secret
-        a = client.XMPPAuthenticator(client_jid, secret)
+        self.mail_time=0
+        self.mail_tid=0
+        a = XMPPAndGoogleAuthenticator(client_jid, secret, self)
         self.f = ClientFactory(a,self)
         self.f.addBootstrap(xmlstream.STREAM_CONNECTED_EVENT, self.onConnected)
         self.f.addBootstrap(xmlstream.STREAM_END_EVENT, self.onDisconnected)
@@ -122,7 +224,6 @@ class Client(object):
         self.xmlstream.addObserver("/presence",self.onPresence)
         self.xmlstream.addObserver("/iq",self.onIq)
 
-
         self.startPresence.attributes={}
 
         if self.startPresence.attributes.has_key("xmlns"):
@@ -137,6 +238,9 @@ class Client(object):
         rosterQ=rosterReq.addElement('query')
         rosterQ.attributes['xmlns']='jabber:iq:roster'
         xs.send(rosterReq)
+
+        if self.isGTalk:
+            self.initGTalk()
 
     def onMessage(self,el):
         self.route(el)
@@ -171,6 +275,12 @@ class Client(object):
         for query in el.elements():
             if query.uri=="jabber:iq:roster":
                 return
+            if query.uri=="google:mail:notify" and query.name=="mailbox":
+                self.mailbox(el)
+                return
+            if query.uri=="google:mail:notify" and query.name=="new-mail":
+                self.newmail(el)
+                return
         nodes=xpath.XPathQuery('/iq/query[@xmlns="http://jabber.org/protocol/disco#items"]/item').queryForNodes(el)
         if nodes:
             for node in nodes:
@@ -187,6 +297,86 @@ class Client(object):
                     node.addElement("jid",content=utils.quoteJID(ujid))
 
         self.route(el)
+
+    def newmail(self,el):
+        iq=Element((None,"iq"))
+        iq.attributes["type"]="get"
+        q=iq.addElement("query")
+        q.attributes["xmlns"]="google:mail:notify"
+        q.attributes["q"]="(!label:^s) (!label:^k) ((label:^u) (label:^i) (!label:^vm))"
+        q.attributes["newer-than-time"]=str(self.mail_time)
+        q.attributes["newer-than-tid"]=str(self.mail_tid)
+        self.send(iq)
+
+    def mailbox(self,el):
+        total=0
+        firstTime=False
+        myuid=self.component.db.getIdByJid(self.host_jid.userhost())
+        if not myuid:
+            return
+        options=self.component.db.getOptsById(myuid)
+        if self.mail_time==0:
+            firstTime=True
+        msgs=[]
+        for mailbox in el.elements():
+            if mailbox.name=="mailbox" and mailbox.uri=="google:mail:notify":
+                self.mail_time=mailbox.getAttribute("result-time")
+                a=[]
+                alTid=False
+                for thread in mailbox.elements():
+                    if not alTid:
+                        self.mail_tid=thread.getAttribute("tid")
+                        alTid=True
+                    url=thread.getAttribute("url")
+                    date=thread.getAttribute("date")
+                    senders="\n"
+                    subject="Subject: no subject\n"
+                    snippet="\n"
+                    for elms in thread.elements():
+                        if elms.name=="senders":
+                            for sender in elms.elements():
+                                nameOfSender=sender.getAttribute("name","")
+                                addressOfSender=sender.getAttribute("address","")
+                                if addressOfSender!='':
+                                    addressOfSender=" <%s> \n" % addressOfSender
+                                senders=senders+nameOfSender+addressOfSender
+                        if elms.name=="subject":
+                            subject="Subject: %s\n" % unicode(elms)
+                        if elms.name=="snippet":
+                            snippet=unicode(elms)
+                    total+=1
+                    msgs.append([senders,snippet,date,subject,url])
+
+                if not (firstTime and options[1]):
+                    msgs.reverse()
+                    for a in msgs:
+                        msg=Element((None,"message"))
+                        msg.attributes["from"]=config.JID
+                        msg.attributes["to"]=self.host_jid.full()
+                        msg.attributes["type"]="headline"
+                        msg.addElement("subject",content="Google New Mail Notify")
+                        msg.addElement("body",content="From: %s\n%s" % (a[0],a[1]))
+                        x=msg.addElement((None,"x"))
+                        x.attributes["xmlns"]="jabber:x:oob"
+                        try:
+                            x.addElement("desc",content=subject+' '+time.strftime("%a %d %b %Y, %H:%M",time.gmtime(long(a[2]))))
+                        except:
+                            x.addElement("desc",content=a[3])
+                        x.addElement("url",content=a[4])
+                        self.component.send(msg)
+
+            if firstTime and options[1]:
+                msg=Element((None,"message"))
+                msg.attributes["from"]=config.JID
+                msg.attributes["to"]=self.host_jid.full()
+                msg.attributes["type"]="headline"
+                msg.addElement("subject",content="Google New Mail Notify")
+                msg.addElement("body",content="You have %s unreaded letters." % (str(total)))
+                x=msg.addElement((None,"x"))
+                x.attributes["xmlns"]="jabber:x:oob"
+                x.addElement("desc",content="You have %s unreaded letters." % (str(total)))
+                x.addElement("url",content=url)
+                self.component.send(msg)
 
     def route(self,el):
         fro = el.getAttribute("from")
@@ -263,3 +453,21 @@ class Client(object):
             self.connector.connect()
             return
         self.xmlstream.sendFooter()
+
+    def initGTalk(self):
+        iq=Element((None,"iq"))
+        iq.attributes["type"]="set"
+        q=iq.addElement("usersetting")
+        q.attributes["xmlns"]="google:setting"
+        x=q.addElement("autoacceptrequests")
+        x.attributes["value"]="false"
+        y=q.addElement("mailnotifications")
+        y.attributes["value"]="true"
+        self.send(iq)
+        iq=Element((None,"iq"))
+        iq.attributes["type"]="get"
+        iq.attributes["id"]="getGoogleMail"
+        q=iq.addElement("query")
+        q.attributes["xmlns"]="google:mail:notify"
+        q.attributes["q"]="(!label:^s) (!label:^k) ((label:^u) (label:^i) (!label:^vm))"
+        self.send(iq)
