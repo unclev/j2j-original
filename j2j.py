@@ -1,3 +1,5 @@
+#!/usr/local/bin/python -u
+# -*- coding: UTF8 -*-
 # $Id$
 
 import md5
