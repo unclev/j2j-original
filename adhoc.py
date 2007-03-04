@@ -32,7 +32,7 @@ class adHoc:
         iq.attributes["id"]=ID
         iq.attributes["type"]="result"
 
-        if action=='execute':
+        if action=='execute' or action==None:
             self.commands[node][1](iq,fro,ID)
 
         if action=='complete':
