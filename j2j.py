@@ -415,6 +415,11 @@ class j2jComponent(component.Service):
         if server=='':
             self.sendIqError(to=fro.full(), fro=config.JID, ID=ID, xmlns='jabber:iq:register', etype="cancel", condition="not-acceptable")
             return
+        try:
+            hjid=jid.JID(username+"@"+server)
+        except:
+            self.sendIqError(to=fro.full(), fro=config.JID, ID=ID, xmlns='jabber:iq:register', etype='cancel',condition='not-acceptable')
+            return
         domain=xpath.XPathQuery(formXPath+"/field[@var='domain']/value").queryForString(el)
         port=xpath.XPathQuery(formXPath+"/field[@var='port']/value").queryForString(el)
         try:
