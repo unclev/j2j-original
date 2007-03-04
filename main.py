@@ -4,7 +4,7 @@ from twisted.internet import reactor
 from config import config
 from twisted.python import versions
 
-version=versions.Version("J2J-Twisted",1,1,5)
+version=versions.Version("j2j",1,1,5)
 
 c=j2j.j2jComponent(reactor,version.package+' version '+version.base())
 f=component.componentFactory(config.JID,config.PASSWORD)
