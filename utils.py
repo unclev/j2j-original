@@ -36,10 +36,12 @@ def addDiscoItem(query, jid, name=None, node=None):
     return item
 
 def quoteJID(ujid):
-    global name
     if ujid=='' or ujid==None:
         return ''
-    els=jid.parse(ujid)
+    try:
+        els=jid.parse(ujid)
+    except:
+        return config.JID
     if els[0]==None:
         qjid=els[1]
     else:
@@ -54,7 +56,10 @@ def quoteJID(ujid):
 def unquoteJID(qjid):
     if qjid=='' or qjid==None:
         return ''
-    els=jid.parse(qjid)
+    try:
+        els=jid.parse(qjid)
+    except:
+        return config.JID
     ujid=els[0]
     ujid=ujid.replace('%','@')
     ujid=ujid.replace('\\@','%')
