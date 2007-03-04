@@ -2,13 +2,18 @@
 # -*- coding: UTF8 -*-
 # $Id$
 
+import sys
+
+if __name__=='__main__':
+    print "start main.py"
+    sys.exit(0)
+
 import md5
 from config import config
 from client import Client
 from adhoc import adHoc
 import time
 import os
-import sys
 import codecs #!
 import utils
 import database
@@ -23,11 +28,10 @@ sys.setdefaultencoding("utf-8")
 sys.stdout = codecs.lookup('utf-8')[-1](sys.stdout)
 
 class j2jComponent(component.Service):
-    VERSION="0.1.3"
-
-    def __init__(self,reactor):
+    def __init__(self,reactor,version):
         self.reactor=reactor
         self.adhoc=adHoc(self)
+        self.VERSION=version
 
     def componentConnected(self, xs):
         self.startTime = time.time()
@@ -630,22 +634,3 @@ class j2jComponent(component.Service):
         cond=error.addElement(condition)
         cond.attributes["xmlns"]="urn:ietf:params:xml:ns:xmpp-stanzas"
         self.send(el)
-
-#def kill(a,b):
-    #print "!"
-    #for client in self.clients.keys():
-        #if self.clients[client].connected:
-            #self.clients[client].xmlstream.sendFooter()
-        #else:
-            #self.clients[client].disconnect=True
-
-#if os.name == "posix":
-    #import signal
-    #signal.signal(signal.SIGTERM, kill)
-
-c=j2jComponent(reactor)
-f=component.componentFactory(config.JID,config.PASSWORD)
-connector = component.buildServiceManager(config.JID, config.PASSWORD, "tcp:%s:%s" % (config.HOST, config.PORT))
-c.setServiceParent(connector)
-connector.startService()
-reactor.run()
