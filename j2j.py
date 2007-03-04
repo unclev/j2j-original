@@ -581,7 +581,7 @@ class j2jComponent(component.Service):
             group=node[8:]
             contacts=self.clients[fro.full()].roster.getAllInGroup(group)
             for contact in contacts:
-                utils.addDiscoItem(query,contact[0],contact[1])
+                utils.addDiscoItem(query,utils.quoteJID(contact[0]),contact[1])
         elif node=="http://jabber.org/protocol/commands":
             self.adhoc.getCommandsList(query)
         elif node in self.adhoc.commands.keys():
