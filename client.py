@@ -87,8 +87,11 @@ class XGoogleToken(object):
         self.host=host
 
     def getInitialResponse(self):
-        lib=urlencode({"Email": self.login, "Passwd": self.password, "PersistentCookie": "false", "source": "googletalk"})
+        print "!"
+        lib=urlencode({"Email": self.login, "Passwd": self.password, "PersistentCookie": "false", "source": "googletalk", "accountType": "HOSTED_OR_GOOGLE"})
+        print "!!"
         defr=twisted.web.client.getPage("https://google.com/accounts/ClientAuth",method="POST",postdata=lib,headers={"Content-Type": "application/x-www-form-urlencoded"})
+        print "!!!"
         defr.addCallback(self.firstDefer)
         defr.addErrback(self.firstDefer)
         return
