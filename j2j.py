@@ -162,7 +162,11 @@ class j2jComponent(component.Service):
             resource=''
         else:
             resource="/"+resource
-        clientJid=jid.JID(data[0]+"@"+data[2]+resource)
+        try:
+            clientJid=jid.JID(data[0]+"@"+data[2]+resource)
+        except:
+            self.sendPresenceError(to=fro.full(),fro=config.JID,etype="cancel",condition="not-acceptable")
+            return
         if data[3]==None or data[3]=='':
             data[3]=data[2]
         newjid=(data[0]+"@"+data[2]).encode('utf-8')
