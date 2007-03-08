@@ -1,5 +1,7 @@
 from twisted.words.xish.domish import Element
 
+__id__ = "$Id$"
+
 class roster:
     def __init__(self,host):
         self.host=host
