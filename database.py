@@ -1,6 +1,8 @@
 from config import config
 import pgdb
 
+__id__ = "$Id$"
+
 class database:
     def __init__(self):
         self.db=pgdb.connect(host=config.DB_HOST,user=config.DB_USER,password=config.DB_PASS,database=config.DB_NAME)
