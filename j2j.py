@@ -1,6 +1,7 @@
 #!/usr/local/bin/python -u
 # -*- coding: UTF8 -*-
-# $Id$
+
+__id__ = "$Id$"
 
 import sys
 
