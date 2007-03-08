@@ -1,6 +1,8 @@
 from twisted.words.protocols.jabber import jid
 from config import config
 
+__id__ = "$Id$"
+
 errorCodeMap = {
 	"bad-request"			:	400,
 	"conflict"			:	409,
