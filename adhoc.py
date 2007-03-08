@@ -4,6 +4,8 @@ from config import config
 from twisted.words.xish.domish import Element
 from twisted.words.xish import xpath
 
+__id__ = "$Id$"
+
 class adHoc:
     def __init__(self,component):
         self.commands={"stat": ["Statistics",self.getStat,None,False],\
@@ -32,7 +34,7 @@ class adHoc:
         iq.attributes["id"]=ID
         iq.attributes["type"]="result"
 
-        if action=='execute' or action==None:
+        if action=='execute' or action==None and sid==None:
             self.commands[node][1](iq,fro,ID)
 
         if action=='complete' or sid!=None:
