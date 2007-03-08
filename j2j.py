@@ -344,15 +344,16 @@ class j2jComponent(component.Service):
             iq.attributes["id"]=ID
         query=iq.addElement("query")
         query.attributes["xmlns"]="jabber:iq:register"
-        form=utils.createForm(query,"form")
-        utils.addTitle(form,"J2J Registration Form")
         uid=self.db.getIdByJid(fro.userhost())
         if uid:
             edit=True
             data=self.db.getDataById(uid)
+            query.addElement("registered")
         else:
             edit=False
             data=[None,None,None,None,5222]
+        form=utils.createForm(query,"form")
+        utils.addTitle(form,"J2J Registration Form")
         if not edit:
             utils.addLabel(form,"Please enter data for your Jabber-account")
         else:
