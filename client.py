@@ -23,6 +23,8 @@ import twisted.words.protocols.jabber.client
 from zope.interface import implements
 import twisted.web.client
 
+__id__ = "$Id$"
+
 class XMPPAndGoogleAuthenticator(client.XMPPAuthenticator):
     def __init__(self,jid,password,client):
         self.client=client
