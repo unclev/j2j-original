@@ -34,7 +34,7 @@ class XMPPAndGoogleAuthenticator(client.XMPPAuthenticator):
         xmlstream.ConnectAuthenticator.associateWithStream(self, xs)
 
         xs.initializers = [CheckVersionInitializer(xs)]
-        inits = [ (xmlstream.TLSInitiatingInitializer, False,False),
+        inits = [ #(xmlstream.TLSInitiatingInitializer, False,False),
                   (SASLAndXGoogleToken, True,True),
                   (BindInitializer, False,False),
                   (SessionInitializer, False,False),
@@ -89,11 +89,8 @@ class XGoogleToken(object):
         self.host=host
 
     def getInitialResponse(self):
-        print "!"
         lib=urlencode({"Email": self.login, "Passwd": self.password, "PersistentCookie": "false", "source": "googletalk", "accountType": "HOSTED_OR_GOOGLE"})
-        print "!!"
         defr=twisted.web.client.getPage("https://google.com/accounts/ClientAuth",method="POST",postdata=lib,headers={"Content-Type": "application/x-www-form-urlencoded"})
-        print "!!!"
         defr.addCallback(self.firstDefer)
         defr.addErrback(self.firstDefer)
         return
