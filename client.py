@@ -393,10 +393,7 @@ class Client(object):
             el.attributes["to"]=self.host_jid.userhost()
         else:
             el.attributes["to"]=self.host_jid.full()
-        if el.attributes.has_key("xmlns"):
-            del el.attributes["xmlns"]
-        del el.uri
-        del el.defaultUri
+        utils.delUri(el)
         uid=self.component.db.getIdByJid(self.host_jid.userhost())
         if not uid: return
         opts=self.component.db.getOptsById(uid)

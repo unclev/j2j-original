@@ -70,10 +70,7 @@ class j2jComponent(component.Service):
 
         el.attributes['to'] = utils.unquoteJID(to.full())
         del el.attributes['from']
-        if el.attributes.has_key("xmlns"):
-            del el.attributes['xmlns']
-        del el.uri
-        del el.defaultUri
+        utils.delUri(el)
 
         self.clients[froStr].send(el)
 
@@ -133,8 +130,7 @@ class j2jComponent(component.Service):
                             pres=self.clients[froStr].presences[pr]
                             pres.attributes["from"]=utils.quoteJID(pr)
                             pres.attributes["to"]=fro.full()
-                            pres.uri=None
-                            pres.defaultUri=None
+                            utils.delUri(pres)
                             self.send(pres)
                     return
 
@@ -174,8 +170,7 @@ class j2jComponent(component.Service):
         newmd5=md5.md5(newjid).hexdigest()
         if not self.clients.has_key(fro.full()) and (presenceType=="available" or presenceType==None):
             js=[]
-            del el.defaultUri
-            del el.uri
+            utils.delUri(el)
             for element in el.elements():
                 if element.name=="x" and element.uri=="j2j:history":
                     try:
@@ -214,8 +209,7 @@ class j2jComponent(component.Service):
             if self.clients[fro.full()].connected:
                 del el.attributes["to"]
                 del el.attributes["from"]
-                del el.uri
-                del el.defaultUri
+                utils.delUri(el)
                 self.clients[fro.full()].send(el)
         elif presenceType=="subscribe":
             presence=Element((None,'presence'))

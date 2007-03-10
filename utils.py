@@ -137,3 +137,10 @@ def addMemo(form,name,caption,value):
 def strToBool(string):
     if string=="0":return False
     return True
+
+def delUri(node):
+    if node.uri=="jabber:component:accept" or node.uri=="jabber:client":
+        del node.uri
+        del node.defaultUri
+    for el in node.elements():
+        delUri(el)
