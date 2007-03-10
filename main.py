@@ -24,7 +24,7 @@ for modName in __all__:
     module=__import__(modName,globals(),locals())
     try:
         modRev=int(module.__id__.split(" ")[2])
-        modDate=int(module.__id__.split(" ")[2].replace("-",""))
+        modDate=int(module.__id__.split(" ")[3].replace("-",""))
     except:
         modRev=0
         modDate=0
