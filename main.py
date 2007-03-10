@@ -30,7 +30,7 @@ for modName in __all__:
         modDate=0
     if modRev>revision:
         revision=modRev
-    if modDate>revision:
+    if modDate>date:
         date=modDate
 
 if revision==0:
