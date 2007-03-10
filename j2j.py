@@ -110,10 +110,10 @@ class j2jComponent(component.Service):
                     froStr=cl
             if not f:
                 return
+            if not self.db.getCount('rosters',"id='%s' AND jid='%s'" % (str(uid),toUnq.encode("utf-8"))):
+                self.db.execute("INSERT INTO %s (id,jid) VALUES ('%s','%s')" % (self.db.dbTablePrefix+"rosters", str(uid), self.db.dbQuote(toUnq.encode("utf-8"))))
+                self.db.commit()
             if self.clients[froStr].roster.items.has_key(toUnq):
-                if not self.db.getCount('rosters',"id='%s' AND jid='%s'" % (str(uid),toUnq.encode("utf-8"))):
-                    self.db.execute("INSERT INTO %s (id,jid) VALUES ('%s','%s')" % (self.db.dbTablePrefix+"rosters", str(uid), self.db.dbQuote(toUnq.encode("utf-8"))))
-                    self.db.commit()
                 subscription=self.clients[froStr].roster.items[toUnq][1]
                 if subscription in ["both","to"]:
                     p = Element((None,"presence"))
@@ -134,7 +134,7 @@ class j2jComponent(component.Service):
                             self.send(pres)
                     return
 
-        if presenceType=="unsubscribe":
+        if presenceType=="unsubscribe" or presenceType=="unsubscribed":
             toUnq=utils.unquoteJID(to.full())
             if self.db.getCount('rosters',"id='%s' AND jid='%s'" % (str(uid),toUnq.encode("utf-8"))):
                 self.db.execute("DELETE FROM %s WHERE id='%s' AND jid='%s'" % (self.db.dbTablePrefix+"rosters", str(uid), self.db.dbQuote(toUnq.encode('utf-8'))))
