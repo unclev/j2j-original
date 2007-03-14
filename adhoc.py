@@ -51,6 +51,13 @@ class adHoc:
         utils.addLabel(form,"J2J Statistics")
         utils.addLabel(form,"Online Users: "+str(len(self.component.clients.keys())))
         utils.addLabel(form,"Total Users: "+str(self.component.db.getCount("users")))
+        utils.addLabel(form,"Version: "+self.component.VERSION)
+        upInSecs=int(time.time()-self.component.startTime)
+        upInDays=int(upInSecs/(3600*24))
+        upInHours=int((upInSecs-upInDays*3600*24)/3600)
+        upInMinutes=int((upInSecs-upInDays*3600*24-upInHours*3600)/60)
+        upInSecs=int(upInSecs-upInDays*3600*24-upInHours*3600-upInMinutes*60)
+        utils.addLabel(form,"Uptime: %d days %d hours %d minutes %d seconds" % (upInDays,upInHours,upInMinutes,upInSecs))
         self.component.send(iq)
 
     def getOpts(self,iq,fro,ID):
