@@ -34,7 +34,7 @@ class XMPPAndGoogleAuthenticator(client.XMPPAuthenticator):
         xmlstream.ConnectAuthenticator.associateWithStream(self, xs)
 
         xs.initializers = [CheckVersionInitializer(xs)]
-        inits = [ #(xmlstream.TLSInitiatingInitializer, False,False),
+        inits = [ (xmlstream.TLSInitiatingInitializer, False,False),
                   (SASLAndXGoogleToken, True,True),
                   (BindInitializer, False,False),
                   (SessionInitializer, False,False),
