@@ -1,3 +1,6 @@
+# Part of J2J (http://JRuDevels.org)
+# Copyright 2007 JRuDevels.org
+
 from twisted.words.xish.domish import Element
 
 __id__ = "$Id$"

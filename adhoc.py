@@ -1,3 +1,6 @@
+# Part of J2J (http://JRuDevels.org)
+# Copyright 2007 JRuDevels.org
+
 import utils
 import time
 from config import config

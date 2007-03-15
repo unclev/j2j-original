@@ -1,5 +1,5 @@
-#!/usr/local/bin/python -u
-# -*- coding: UTF8 -*-
+# Part of J2J (http://JRuDevels.org)
+# Copyright 2007 JRuDevels.org
 
 __id__ = "$Id$"
 

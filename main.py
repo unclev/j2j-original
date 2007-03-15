@@ -1,4 +1,14 @@
 #!/usr/bin/python
+# J2J - Jabber-To-Jabber component
+# http://JRuDevels.org
+# http://wiki.JRuDevels.org
+#
+# copyright 2007 Dobrov Sergey aka Binary from JRuDevels
+#
+# License: BSD
+#
+
+
 import j2j
 from twisted.words.protocols.jabber import component
 from twisted.internet import reactor
