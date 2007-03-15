@@ -1,3 +1,4 @@
+#!/usr/bin/python
 import j2j
 from twisted.words.protocols.jabber import component
 from twisted.internet import reactor
