@@ -166,7 +166,10 @@ class j2jComponent(component.Service):
             return
         if data[3]==None or data[3]=='':
             data[3]=data[2]
-        newjid=(data[0]+"@"+data[2]).encode('utf-8')
+        try:
+            newjid=jid.JID(data[0]+"@"+data[2]).userhost().encode('utf-8')
+        except:
+            return
         newmd5=md5.md5(newjid).hexdigest()
         if not self.clients.has_key(fro.full()) and (presenceType=="available" or presenceType==None):
             js=[]
@@ -184,15 +187,16 @@ class j2jComponent(component.Service):
                     for jidmd5 in element.elements():
                         if jidmd5.name=="jid":
                             js.append(unicode(jidmd5))
-                    element.addElement("jid",content=md5.md5(fro.full().encode("utf-8")).hexdigest())
-            if newmd5 in js:
-                self.sendPresenceError(fro.full(),config.JID,"cancel","conflict")
-                return
+                    element.addElement("jid",content=md5.md5(fro.userhost().encode("utf-8")).hexdigest())
             if js==[]:
                 j2jh=el.addElement("x")
                 j2jh.attributes["xmlns"]="j2j:history"
                 j2jh.attributes["hops"]="1"
-                j2jh.addElement("jid",content=md5.md5(fro.full().encode("utf-8")).hexdigest())
+                j2jh.addElement("jid",content=md5.md5(fro.userhost().encode("utf-8")).hexdigest())
+            js.append(md5.md5(fro.userhost().encode("utf-8")).hexdigest())
+            if newmd5 in js:
+                self.sendPresenceError(fro.full(),config.JID,"cancel","conflict")
+                return
             presence=Element((None,'presence'))
             presence.attributes['to']=fro.full()
             presence.attributes['from']=config.JID
