@@ -40,7 +40,7 @@ class adHoc:
         if action=='execute' or action==None and sid==None:
             self.commands[node][1](iq,fro,ID)
 
-        if action=='complete' or sid!=None:
+        if action=='complete' or sid!=None and self.commands[node][2]!=None:
             self.commands[node][2](el,iq,sid,fro,ID)
 
         if action=='cancel':

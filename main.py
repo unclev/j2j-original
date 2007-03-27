@@ -52,7 +52,7 @@ if date!=0:
     date=str(date)
     revision=revision+" %s-%s-%s" % (date[:4],date[4:6],date[6:8])
 
-version="1.1.7"+revision
+version="1.1.8"+revision
 
 c=j2j.j2jComponent(reactor,version)
 f=component.componentFactory(config.JID,config.PASSWORD)
