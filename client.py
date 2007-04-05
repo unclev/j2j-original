@@ -117,7 +117,10 @@ class XGoogleToken(object):
         return
 
     def secondDefer(self,respond):
-        self.host.sendAuth("\x00%s\x00%s" % (self.login,respond.splitlines()[0]))
+        try:
+            self.host.sendAuth("\x00%s\x00%s" % (self.login,respond.splitlines()[0]))
+        except:
+            self.host.sendAuth("\x00")
 
 class XMPPClientConnector(SRVConnector):
     def __init__(self, reactor, domain, factory, port=5222):

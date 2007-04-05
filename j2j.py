@@ -36,6 +36,12 @@ class j2jComponent(component.Service):
 
     def componentConnected(self, xs):
         self.startTime = time.time()
+        try:
+            for client in self.clients.keys():
+                self.clients[client].xmlstream.sendFooter()
+            del self.clients
+        except:
+            pass
         self.clients = {}
         self.db=database.database()
         self.xmlstream = xs
