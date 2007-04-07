@@ -335,7 +335,7 @@ class j2jComponent(component.Service):
         vcard=iq.addElement("vCard")
         vcard.attributes["xmlns"]="vcard-temp"
         vcard.addElement("NICKNAME",content="J2J")
-        vcard.addElement("DESC",content="Jabber-To-Jabber Transport (GTalk, LiveJournal inside)")
+        vcard.addElement("DESC",content="Jabber-To-Jabber Transport (GTalk, LiveJournal inside)\nDescription: http://wiki.JRuDevels.org/index.php/J2J")
         vcard.addElement("URL",content="http://JRuDevels.org")
         self.send(iq)
 
