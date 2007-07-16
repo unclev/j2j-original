@@ -12,8 +12,10 @@ __id__ = "$Id$"
 class adHoc:
     def __init__(self,component):
         self.commands={"stat": ["Statistics",self.getStat,None,False],\
-                       "options": ["Options",self.getOpts,self.setOpts,True]}
+                       "options": ["Options",self.getOpts,self.setOpts,True],\
+                       "replicate_vCard": ["Replicate host's vCard to guest's account",self.getReplica,self.setReplica,True]}
         self.sid=0
+        self.vCardSids={}
 
         self.component=component
 
@@ -40,12 +42,50 @@ class adHoc:
         if action=='execute' or action==None and sid==None:
             self.commands[node][1](iq,fro,ID)
 
-        if action=='complete' or sid!=None and self.commands[node][2]!=None:
-            self.commands[node][2](el,iq,sid,fro,ID)
-
         if action=='cancel':
             command=utils.createCommand(iq,node,"canceled",sid)
             self.component.send(iq)
+
+        if action=='complete' or (sid!=None and action==None) and self.commands[node][2]!=None:
+            self.commands[node][2](el,iq,sid,fro,ID)
+
+    def getReplica(self,iq,fro,ID):
+        if not fro.full() in self.component.clients.keys():
+            command=utils.createCommand(iq,"stat","completed",self.getSid())
+            form=utils.createForm(command,"result")
+            utils.addTitle(form,"Execution error")
+            utils.addLabel(form,"Please log in first.")
+            self.component.send(iq)
+            return
+        command=utils.createCommand(iq,"replicate_vCard","executing",self.getSid())
+        form=utils.createForm(command,"form")
+        utils.addTitle(form,"vCard replication")
+        utils.addLabel(form,"Are you sure want to replicate your host's vCard to your guest's account?")
+        utils.addCheckBox(form,"commit_cb","Yes, do it",False)
+        self.component.send(iq)
+
+    def setReplica(self,el,iq,sid,fro,ID):
+        uid=self.component.db.getIdByJid(fro.userhost())
+        if not uid:
+            return
+        xPathStr='/command/x[@xmlns="jabber:x:data"]'
+        commited=xpath.XPathQuery(xPathStr+"/field[@var='commit_cb']/value").queryForString(el)
+        if commited=="0" or not fro.full() in self.component.clients.keys():
+            command=utils.createCommand(iq,"replicate_vCard","completed",sid)
+            form=utils.createForm(command,"result")
+            utils.addTitle(form,"Execution canceled")
+            utils.addLabel(form,"Replication cancelled")
+            self.component.send(iq)
+            return
+        el = Element((None, "iq"))
+        el.attributes["to"]=fro.userhost()
+        el.attributes["from"]=config.JID
+        el.attributes["id"]=sid
+        el.attributes["type"]="get"
+        vc=el.addElement("vCard")
+        vc.attributes["xmlns"]="vcard-temp"
+        self.component.send(el)
+        self.vCardSids[sid]=(fro,ID)
 
     def getStat(self,iq,fro,ID):
         command=utils.createCommand(iq,"stat","completed",self.getSid())

@@ -280,6 +280,19 @@ class Client(object):
         self.route(el)
 
     def onIq(self,el):
+        iqId=el.attributes["id"]
+        iqType=el.attributes["type"]
+        if iqId in self.component.adhoc.vCardSids.keys() and iqType=="result":
+            if self.component.adhoc.vCardSids[iqId][0].full()==self.host_jid.full():
+                iq=Element((None,"iq"))
+                iq.attributes["to"]=self.component.adhoc.vCardSids[iqId][0].full()
+                iq.attributes["from"]=config.JID
+                iq.attributes["id"]=self.component.adhoc.vCardSids[iqId][1]
+                iq.attributes["type"]="result"
+                command=utils.createCommand(iq,"replicate_vCard","completed",iqId)
+                self.component.send(iq)
+                del self.component.adhoc.vCardSids[iqId]
+                return
         for query in el.elements():
             if query.uri=="jabber:iq:roster":
                 return

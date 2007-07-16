@@ -252,6 +252,10 @@ class j2jComponent(component.Service):
             xmlns=query.uri
             node=query.getAttribute("node")
 
+            if xmlns=="vcard-temp" and iqType=="result":
+                self.result_vCard(el,fro,ID)
+                return
+
             if xmlns=="jabber:iq:register" and iqType=="get":
                 self.getRegister(el,fro,ID)
                 return
@@ -297,6 +301,18 @@ class j2jComponent(component.Service):
                 return
 
             self.sendIqError(to=fro.full(), fro=config.JID, ID=ID, xmlns=xmlns, etype="cancel", condition="feature-not-implemented")
+
+    def result_vCard(self,el,fro,ID):
+        if not ID in self.adhoc.vCardSids.keys():
+            return
+        if fro.userhost()!=self.adhoc.vCardSids[ID][0].userhost():
+            return
+        if not self.adhoc.vCardSids[ID][0].full() in self.clients.keys():
+            return
+        del el.attributes["to"]
+        del el.attributes["from"]
+        el.attributes["type"]="set"
+        self.clients[self.adhoc.vCardSids[ID][0].full()].xmlstream.send(el)
 
     def getStats(self,el,fro,ID):
         iq = Element((None,"iq"))
