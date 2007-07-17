@@ -280,8 +280,14 @@ class Client(object):
         self.route(el)
 
     def onIq(self,el):
-        iqId=el.attributes["id"]
-        iqType=el.attributes["type"]
+        if el.attributes.has_key("id"):
+            iqId=el.attributes["id"]
+        else:
+            iqId=None
+        if el.attributes.has_key("type"):
+            iqType=el.attributes["type"]
+        else:
+            iqType=None
         if iqId in self.component.adhoc.vCardSids.keys() and iqType=="result":
             if self.component.adhoc.vCardSids[iqId][0].full()==self.host_jid.full():
                 iq=Element((None,"iq"))
