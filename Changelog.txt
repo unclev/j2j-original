@@ -1,0 +1,10 @@
+J2J Component (http://wiki.jrudevels.org/J2J) Changelog:
+
+1.1.8:
+    [add] Experemental MySQL support.
+    [add] vCard replication
+ 
+    [fix] svn ps svn:executable \* https://svn.jrudevels.org/j2j/trunk/main.py; svn ps svn:ignore \*.pyc https://svn.jrudevels.org/j2j/trunk/
+    [fix] AdHoc handling bug
+    [fix] Localization problems
+    [fix] error stanzas

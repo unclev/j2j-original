@@ -1,0 +1,27 @@
+CREATE TABLE j2j_rosters (
+    num bigint NOT NULL AUTO_INCREMENT,
+    id integer,
+    jid varchar(255),
+    PRIMARY KEY(num)
+);
+
+CREATE TABLE j2j_users (
+    id bigint NOT NULL AUTO_INCREMENT,
+    jid varchar(255),
+    username varchar(255),
+    `domain` varchar(255),
+    server varchar(255),
+    `password` varchar(255),
+    port integer,
+    primary key(id)
+);
+
+CREATE TABLE j2j_users_options (
+    id integer,
+    replytext varchar(255),
+    lightnotify boolean DEFAULT false,
+    autoreplybutforward boolean DEFAULT false,
+    onlyroster boolean DEFAULT false,
+    autoreplyenabled boolean DEFAULT false,
+    primary key(id)
+);
