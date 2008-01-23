@@ -8,7 +8,14 @@ __id__ = "$Id$"
 
 class database:
     def __init__(self):
-        self.db=pgdb.connect(host=config.DB_HOST,user=config.DB_USER,password=config.DB_PASS,database=config.DB_NAME)
+        if config.DB_TYPE == "mysql":
+            exec 'import MySQLdb'
+            self.db=MySQLdb.connect(host=config.DB_HOST,user=config.DB_USER,passwd=config.DB_PASS,db=config.DB_NAME)
+        elif config.DB_TYPE == "postgres":
+            exec 'import pgdb'
+            self.db=pgdb.connect(host=config.DB_HOST,user=config.DB_USER,password=config.DB_PASS,database=config.DB_NAME)
+        else:
+            self.db = None
         self.dbCursor=self.db.cursor()
         self.dbTablePrefix=config.DB_PREFIX
 
@@ -23,7 +30,10 @@ class database:
 
     def fetchone(self,query):
         self.dbCursor.execute(query)
-        return self.dbCursor.fetchone()
+        data = self.dbCursor.fetchone()
+        if data == None:
+            return data
+        return list(data)
 
     def fetchall(self,query):
         self.dbCursor.execute(query)

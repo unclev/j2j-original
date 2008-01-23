@@ -5,7 +5,7 @@
 #
 # copyright 2007 Dobrov Sergey aka Binary from JRuDevels
 #
-# License: BSD
+# License: GPL-v3
 #
 
 

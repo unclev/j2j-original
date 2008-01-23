@@ -135,6 +135,7 @@ class ClientFactory(xmlstream.XmlStreamFactory):
 
     def clientConnectionFailed(self, connector, reason):
         error="remote-server-not-found"
+        cond="cancel"
         if reason.check(DNSNameError,DNSLookupError) and self.host.tryingSRV:
             self.stopTrying()
             self.host.tryingSRV=False
@@ -144,7 +145,8 @@ class ClientFactory(xmlstream.XmlStreamFactory):
             self.stopTrying()
         elif reason.check(TimeoutError):
             error="remote-server-timeout"
-        self.host.component.sendPresenceError(self.host.host_jid.full(),config.JID,"cancel",error)
+            cond="wait"
+        self.host.component.sendPresenceError(self.host.host_jid.full(),config.JID,cond,error)
         self.host.component.deleteClient(self.host.host_jid)
 
     def clientConnectionLost(self, connector, reason):
@@ -160,6 +162,7 @@ class Client(object):
         self.alreadyReply = []
         self.component=component
         self.connected=False
+        self.authenticated=False
         self.host_jid=host_jid
         self.roster=roster(self)
         self.reactor=reactor
@@ -246,6 +249,8 @@ class Client(object):
         rosterQ=rosterReq.addElement('query')
         rosterQ.attributes['xmlns']='jabber:iq:roster'
         xs.send(rosterReq)
+
+        self.authenticated=True
 
         if self.isGTalk:
             self.initGTalk()
@@ -398,10 +403,10 @@ class Client(object):
                 msg.attributes["to"]=self.host_jid.full()
                 msg.attributes["type"]="headline"
                 msg.addElement("subject",content="Google New Mail Notify")
-                msg.addElement("body",content="You have %s unreaded letters." % (str(total)))
+                msg.addElement("body",content="You have %s unread letters." % (str(total)))
                 x=msg.addElement((None,"x"))
                 x.attributes["xmlns"]="jabber:x:oob"
-                x.addElement("desc",content="You have %s unreaded letters." % (str(total)))
+                x.addElement("desc",content="You have %s unread letters." % (str(total)))
                 x.addElement("url",content=url)
                 self.component.send(msg)
 
@@ -458,7 +463,7 @@ class Client(object):
 
         if failure.check(StanzaError,SASLNoAcceptableMechanism,SASLAuthError):
             self.error=True
-            self.component.sendPresenceError(self.host_jid.full(),config.JID,"cancel",'not-authorized')
+            self.component.sendPresenceError(self.host_jid.full(),config.JID,"auth",'not-authorized')
             self.onDisconnected(None)
             return
 

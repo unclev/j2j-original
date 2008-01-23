@@ -4,6 +4,7 @@ class config:
     PORT="8888"
     PASSWORD="secret"
 
+    DB_TYPE="postgres"
     DB_HOST=None
     DB_USER="user"
     DB_NAME="j2j"

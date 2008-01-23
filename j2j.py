@@ -59,7 +59,17 @@ class j2jComponent(component.Service):
         except:
             return
         if to.full()==config.JID: return
-        self.routeStanza(el,fro,to)
+        uid=self.db.getIdByJid(fro.userhost())
+        if not uid:
+            self.sendMessageError(to=fro.full(),fro=to.full(),etype="auth",condition="registration-required")
+        if not self.clients.has_key(fro.full()):
+            pass
+        elif not self.clients[fro.full()].authenticated:
+            pass
+        else:
+            self.routeStanza(el,fro,to)
+            return
+        self.sendMessageError(to=fro.full(),fro=to.full(),etype="cancel",condition="service-unavailable")
 
     def routeStanza(self, el, fro, to):
         froStr=fro.full()
@@ -90,13 +100,19 @@ class j2jComponent(component.Service):
         except:
             return
 
+        uid=self.db.getIdByJid(fro.userhost())
+        if not uid:
+            self.sendPresenceError(to=fro.full(),fro=to.full(),etype="auth",condition="registration-required")
+            return
+
         if to.full()==config.JID:
             self.componentPresence(el,fro,presenceType)
             return
 
-        uid=self.db.getIdByJid(fro.userhost())
-        if not uid:
-            return
+        if not self.clients.has_key(fro.full()):
+            self.sendPresenceError(to=fro.full(),fro=to.full(),etype="cancel",condition="service-unavailable")
+        elif not self.clients[fro.full()].authenticated:
+            self.sendPresenceError(to=fro.full(),fro=to.full(),etype="cancel",condition="service-unavailable")
 
         if presenceType=="available" or presenceType==None:
             froStr=fro.full()
@@ -157,7 +173,7 @@ class j2jComponent(component.Service):
     def componentPresence(self,el,fro,presenceType):
         uid=self.db.getIdByJid(fro.userhost())
         if not uid:
-            self.sendPresenceError(to=fro.full(),fro=config.JID,etype="cancel",condition="registration-required")
+            #self.sendPresenceError(to=fro.full(),fro=config.JID,etype="cancel",condition="registration-required")
             return
         data=self.db.getDataById(uid)
         resource=jid.parse(fro.full())[2]
@@ -168,7 +184,7 @@ class j2jComponent(component.Service):
         try:
             clientJid=jid.JID(data[0]+"@"+data[2]+resource)
         except:
-            self.sendPresenceError(to=fro.full(),fro=config.JID,etype="cancel",condition="not-acceptable")
+            self.sendPresenceError(to=fro.full(),fro=config.JID,etype="modify",condition="not-acceptable")
             return
         if data[3]==None or data[3]=='':
             data[3]=data[2]
@@ -206,7 +222,7 @@ class j2jComponent(component.Service):
             presence=Element((None,'presence'))
             presence.attributes['to']=fro.full()
             presence.attributes['from']=config.JID
-            presence.addElement('show',content="xa")
+            presence.attributes['type']='unavailable'
             presence.addElement('status',content="Logging in...")
             self.send(presence)
             self.clients[fro.full()]=Client(el,self.reactor,self,fro,clientJid,data[3],data[1],data[4])
@@ -245,7 +261,18 @@ class j2jComponent(component.Service):
         if to.full()==config.JID:
             self.componentIq(el,fro,ID,iqType)
             return
-        self.routeStanza(el,fro,to)
+        uid=self.db.getIdByJid(fro.userhost())
+        if not uid:
+            self.sendIqError(to=fro.full(),fro=to.full(),etype="auth", ID=ID,condition="registration-required")
+            return
+        if not self.clients.has_key(fro.full()):
+            pass
+        elif not self.clients[fro.full()].authenticated:
+            pass
+        else:
+            self.routeStanza(el,fro,to)
+            return
+        self.sendIqError(to=fro.full(),fro=to.full(),ID=ID,etype="cancel",condition="service-unavailable")
 
     def componentIq(self,el,fro,ID,iqType):
         for query in el.elements():
@@ -300,7 +327,7 @@ class j2jComponent(component.Service):
                 self.getStats(el,fro,ID)
                 return
 
-            self.sendIqError(to=fro.full(), fro=config.JID, ID=ID, xmlns=xmlns, etype="cancel", condition="feature-not-implemented")
+            self.sendIqError(to=fro.full(), fro=config.JID, ID=ID, etype="cancel", condition="feature-not-implemented")
 
     def result_vCard(self,el,fro,ID):
         if not ID in self.adhoc.vCardSids.keys():
@@ -312,6 +339,8 @@ class j2jComponent(component.Service):
         del el.attributes["to"]
         del el.attributes["from"]
         el.attributes["type"]="set"
+        utils.delUri(el)
+        print str(el.toXml())
         self.clients[self.adhoc.vCardSids[ID][0].full()].xmlstream.send(el)
 
     def getStats(self,el,fro,ID):
@@ -393,7 +422,7 @@ class j2jComponent(component.Service):
             edit=False
         if xpath.XPathQuery("/iq/query[@xmlns='jabber:iq:register']/remove").matches(el):
             if not edit:
-                self.sendIqError(to=fro.full(), fro=config.JID, ID=ID, xmlns='jabber:iq:register', etype="cancel", condition="registration-required")
+                self.sendIqError(to=fro.full(), fro=config.JID, ID=ID, etype="auth", condition="registration-required")
                 return
             for j in self.clients.keys():
                 if j.find(fro.userhost()+"/")==0:
@@ -431,20 +460,20 @@ class j2jComponent(component.Service):
         formXPath="/iq/query[@xmlns='jabber:iq:register']/x[@xmlns='jabber:x:data'][@type='submit']"
         username=xpath.queryForString(formXPath+"/field[@var='username']/value",el)
         if username=='':
-            self.sendIqError(to=fro.full(), fro=config.JID, ID=ID, xmlns='jabber:iq:register', etype="cancel", condition="not-acceptable")
+            self.sendIqError(to=fro.full(), fro=config.JID, ID=ID, etype="modify", condition="not-acceptable")
             return
         password=xpath.XPathQuery(formXPath+"/field[@var='password']/value").queryForString(el)
         if password=='':
-            self.sendIqError(to=fro.full(), fro=config.JID, ID=ID, xmlns='jabber:iq:register', etype="cancel", condition="not-acceptable")
+            self.sendIqError(to=fro.full(), fro=config.JID, ID=ID, etype="modify", condition="not-acceptable")
             return
         server=xpath.XPathQuery(formXPath+"/field[@var='server']/value").queryForString(el)
         if server=='':
-            self.sendIqError(to=fro.full(), fro=config.JID, ID=ID, xmlns='jabber:iq:register', etype="cancel", condition="not-acceptable")
+            self.sendIqError(to=fro.full(), fro=config.JID, ID=ID, etype="modify", condition="not-acceptable")
             return
         try:
             hjid=jid.JID(username+"@"+server)
         except:
-            self.sendIqError(to=fro.full(), fro=config.JID, ID=ID, xmlns='jabber:iq:register', etype='cancel',condition='not-acceptable')
+            self.sendIqError(to=fro.full(), fro=config.JID, ID=ID, etype='modify',condition='not-acceptable')
             return
         domain=xpath.XPathQuery(formXPath+"/field[@var='domain']/value").queryForString(el)
         port=xpath.XPathQuery(formXPath+"/field[@var='port']/value").queryForString(el)
@@ -561,7 +590,7 @@ class j2jComponent(component.Service):
                 if self.adhoc.commands[node][3]:
                     uid=self.db.getIdByJid(fro.userhost())
                     if not uid:
-                        self.sendIqError(to=fro.full(), fro=config.JID, ID=ID, xmlns='http://jabber.org/protocol/disco#info', etype="cancel", condition="not-authorized")
+                        self.sendIqError(to=fro.full(), fro=config.JID, ID=ID, etype="auth", condition="not-authorized")
                         return
                 identity=query.addElement("identity")
                 identity.attributes["name"]=self.adhoc.commands[node][0]
@@ -627,7 +656,7 @@ class j2jComponent(component.Service):
             if self.adhoc.commands[node][3]:
                 uid=self.db.getIdByJid(fro.userhost())
                 if not uid:
-                    self.sendIqError(to=fro.full(), fro=config.JID, ID=ID, xmlns='http://jabber.org/protocol/disco#items', etype="cancel", condition="not-authorized")
+                    self.sendIqError(to=fro.full(), fro=config.JID, ID=ID, etype="auth", condition="not-authorized")
                     return
         self.send(iq)
 
@@ -640,7 +669,7 @@ class j2jComponent(component.Service):
             el.attributes["type"] = "result"
             self.send(el)
 
-    def sendIqError(self, to, fro, ID, xmlns, etype, condition):
+    def sendIqError(self, to, fro, ID, etype, condition):
         el = Element((None, "iq"))
         el.attributes["to"] = to
         el.attributes["from"] = fro
@@ -659,6 +688,18 @@ class j2jComponent(component.Service):
         el.attributes["to"] = to
         el.attributes["from"] = fro
         el.attributes["type"] = "error"
+        error = el.addElement("error")
+        error.attributes["type"] = etype
+        error.attributes["code"] = str(utils.errorCodeMap[condition])
+        cond=error.addElement(condition)
+        cond.attributes["xmlns"]="urn:ietf:params:xml:ns:xmpp-stanzas"
+        self.send(el)
+
+    def sendMessageError(self, to, fro, etype, condition):
+        el = Element((None,"message"))
+        el.attributes["to"]=to
+        el.attributes["from"]=fro
+        el.attributes["type"]="error"
         error = el.addElement("error")
         error.attributes["type"] = etype
         error.attributes["code"] = str(utils.errorCodeMap[condition])
