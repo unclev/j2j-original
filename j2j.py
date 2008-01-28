@@ -340,7 +340,6 @@ class j2jComponent(component.Service):
         del el.attributes["from"]
         el.attributes["type"]="set"
         utils.delUri(el)
-        print str(el.toXml())
         self.clients[self.adhoc.vCardSids[ID][0].full()].xmlstream.send(el)
 
     def getStats(self,el,fro,ID):
