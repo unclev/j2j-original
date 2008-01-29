@@ -109,11 +109,6 @@ class j2jComponent(component.Service):
             self.componentPresence(el,fro,presenceType)
             return
 
-        if not self.clients.has_key(fro.full()):
-            self.sendPresenceError(to=fro.full(),fro=to.full(),etype="cancel",condition="service-unavailable")
-        elif not self.clients[fro.full()].authenticated:
-            self.sendPresenceError(to=fro.full(),fro=to.full(),etype="cancel",condition="service-unavailable")
-
         if presenceType=="available" or presenceType==None:
             froStr=fro.full()
             if not self.clients.has_key(fro.full()): return
