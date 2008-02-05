@@ -2,7 +2,6 @@
 # Copyright 2007 JRuDevels.org
 
 from config import config
-import pgdb
 
 __id__ = "$Id$"
 
