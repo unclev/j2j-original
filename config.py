@@ -13,6 +13,8 @@ class config:
         self.PASSWORD=unicode(config.get("component","Password"),"utf-8")
 
         self.DB_HOST=unicode(config.get("database","Host"),"utf-8")
+        if self.DB_HOST=="":
+            self.DB_HOST=None
         self.DB_TYPE=unicode(config.get("database","Type"),"utf-8")
         self.DB_USER=unicode(config.get("database","User"),"utf-8")
         self.DB_NAME=unicode(config.get("database","Name"),"utf-8")
