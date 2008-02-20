@@ -1,7 +1,8 @@
 # Part of J2J (http://JRuDevels.org)
 # Copyright 2007 JRuDevels.org
 
-from config import config
+import config
+config=config.config()
 
 __id__ = "$Id$"
 

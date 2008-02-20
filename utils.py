@@ -2,7 +2,8 @@
 # Copyright 2007 JRuDevels.org
 
 from twisted.words.protocols.jabber import jid
-from config import config
+import config
+config=config.config()
 
 __id__ = "$Id$"
 

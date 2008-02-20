@@ -1,0 +1,16 @@
+[component]
+JID=j2j.localhost
+Host=localhost
+Port=8883
+Password=secret
+
+[database]
+Host=localhost
+Type=postgres ;or mysql
+User=j2j
+Name=j2j
+Password=db_secret
+Prefix=j2j_
+
+[admins]
+List=admin1@foo.org,admin2@example.net,admin3@some.net

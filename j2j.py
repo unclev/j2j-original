@@ -10,7 +10,8 @@ if __name__=='__main__':
     sys.exit(0)
 
 import md5
-from config import config
+import config
+config=config.config()
 from client import Client
 from adhoc import adHoc
 import time

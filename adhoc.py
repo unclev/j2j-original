@@ -3,7 +3,8 @@
 
 import utils
 import time
-from config import config
+import config
+config=config.config()
 from twisted.words.xish.domish import Element
 from twisted.words.xish import xpath
 
