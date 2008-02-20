@@ -4,6 +4,7 @@ J2J Component (http://wiki.jrudevels.org/J2J) Changelog:
     [add] Experemental MySQL support.
     [add] vCard replication
  
+    [fix] jabber:iq:roster "from" attribute interpretation fix
     [fix] svn ps svn:executable \* https://svn.jrudevels.org/j2j/trunk/main.py; svn ps svn:ignore \*.pyc https://svn.jrudevels.org/j2j/trunk/
     [fix] AdHoc handling bug
     [fix] Localization problems

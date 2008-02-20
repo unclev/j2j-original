@@ -663,7 +663,7 @@ class j2jComponent(component.Service):
             el.attributes["type"] = "result"
             self.send(el)
 
-    def sendIqError(self, to, fro, ID, etype, condition):
+    def sendIqError(self, to, fro, ID, etype, condition, sender=None):
         el = Element((None, "iq"))
         el.attributes["to"] = to
         el.attributes["from"] = fro
@@ -675,7 +675,9 @@ class j2jComponent(component.Service):
             error.attributes["code"] = str(utils.errorCodeMap[condition])
             cond = error.addElement(condition)
             cond.attributes["xmlns"]="urn:ietf:params:xml:ns:xmpp-stanzas"
-            self.send(el)
+            if not sender:
+                sender=self
+            sender.send(el)
 
     def sendPresenceError(self, to, fro, etype, condition):
         el = Element((None, "presence"))

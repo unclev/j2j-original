@@ -55,6 +55,10 @@ class roster:
         return all
 
     def onIq(self,el):
+        iqFrom=el.getAttribute("from")
+        if not iqFrom in (None, self.host.client_jid.full(), self.host.client_jid.userhost()):
+            self.host.component.sendIqError(el.getAttribute("from"),el.getAttribute("to"),el.getAttribute("id"),"cancel","not-acceptable",sender=self.host)
+            return
         iqType=el.attributes["type"]
         if not iqType in ["set","result"]: return
         for query in el.elements():
