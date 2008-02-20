@@ -14,3 +14,13 @@ Prefix=j2j_
 
 [admins]
 List=admin1@foo.org,admin2@example.net,admin3@some.net
+
+[debug]
+logfile=/var/log/j2j/j2j.log
+registrations=True
+logins=True
+
+xml_logging=/var/log/j2j/xml.log
+component_xml=False
+clients_xml=False
+clients_jids_to_log=All ;or user1@server,user2@server

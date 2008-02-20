@@ -135,6 +135,7 @@ class ClientFactory(xmlstream.XmlStreamFactory):
         self.maxRetries=1
 
     def clientConnectionFailed(self, connector, reason):
+        self.host.component.debug.loginsLog("User %s has error in connection:\n%s" % (self.host.host_jid.full(),str(reason)))
         error="remote-server-not-found"
         cond="cancel"
         if reason.check(DNSNameError,DNSLookupError) and self.host.tryingSRV:
@@ -151,7 +152,7 @@ class ClientFactory(xmlstream.XmlStreamFactory):
         self.host.component.deleteClient(self.host.host_jid)
 
     def clientConnectionLost(self, connector, reason):
-        pass
+        self.host.component.debug.loginsLog("User %s has lost connection\n%s" % (self.host.host_jid.full(),str(reason)))
 
 class Client(object):
     def __init__(self, el, reactor, component, host_jid, client_jid, server, secret, port=5222):
@@ -186,15 +187,24 @@ class Client(object):
         self.tryingNonSASL = False
         self.tryingSASL = True
         self.connector = XMPPClientConnector(reactor, server, self.f, port)
+        self.component.debug.loginsLog("User %s is connecting to %s:%s with guest-jid %s" % (host_jid.full(),server,str(port),client_jid.full()))
         self.connector.connect()
         #reactor.connectTCP(server,port,self.f)
 
     def onConnected(self, xs):
         self.xmlstream = xs
+        self.xmlstream.rawDataInFn=self.rawIn
+        self.xmlstream.rawDataOutFn=self.rawOut
         if not self.disconnect:
             self.connected = True
         else:
             self.xmlstream.sendFooter()
+
+    def rawIn(self,data):
+        self.component.debug.clientsXmlsLog(data,self.client_jid,self.host_jid)
+
+    def rawOut(self,data):
+        self.component.debug.clientsXmlsLog(data,self.client_jid,self.host_jid,True)
 
     def onDisconnected(self, xs):
         if self.tryingNonSASL and not self.connected: return
@@ -458,6 +468,7 @@ class Client(object):
         return True
 
     def onInitFailed(self, failure):
+        self.component.debug.loginsLog("User %s has fail in connection init:\n%s" % (self.host_jid.full(),str(failure)))
         if failure.check(ConnectionDone):
             self.xmlstream.sendFooter()
             return

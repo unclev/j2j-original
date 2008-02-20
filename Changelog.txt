@@ -4,6 +4,7 @@ J2J Component (http://wiki.jrudevels.org/J2J) Changelog:
     [add] Experemental MySQL support.
     [add] vCard replication
     [add] Some command-line options
+    [add] Some logs
 
     [chg] New configuration scheme
  

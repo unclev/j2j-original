@@ -12,6 +12,7 @@ if __name__=='__main__':
 import md5
 import config
 config=config.config()
+import debug
 from client import Client
 from adhoc import adHoc
 import time
@@ -44,12 +45,21 @@ class j2jComponent(component.Service):
         except:
             pass
         self.clients = {}
+        self.debug=debug.debug(config.LOGFILE,config.DEBUG_REGISTRATIONS,config.DEBUG_LOGINS,config.DEBUG_XMLLOG,config.DEBUG_COMPXML,config.DEBUG_CLXML,config.DEBUG_CLXMLACL)
         self.db=database.database()
         self.xmlstream = xs
+        self.xmlstream.rawDataInFn=self.rawIn
+        self.xmlstream.rawDataOutFn=self.rawOut
         self.xmlstream.addObserver("/iq", self.onIq)
         self.xmlstream.addObserver("/presence", self.onPresence)
         self.xmlstream.addObserver("/message", self.onMessage)
         print "Connected"
+
+    def rawIn(self,data):
+        self.debug.componentXmlsLog(data)
+
+    def rawOut(self,data):
+        self.debug.componentXmlsLog(data,True)
 
     def onMessage(self,el):
         fro = el.getAttribute("from")
@@ -190,6 +200,7 @@ class j2jComponent(component.Service):
             return
         newmd5=md5.md5(newjid).hexdigest()
         if not self.clients.has_key(fro.full()) and (presenceType=="available" or presenceType==None):
+            self.debug.loginsLog("User %s is trying to log in" % (fro.full()))
             js=[]
             utils.delUri(el)
             for element in el.elements():
@@ -214,6 +225,7 @@ class j2jComponent(component.Service):
             js.append(md5.md5(fro.userhost().encode("utf-8")).hexdigest())
             if newmd5 in js:
                 self.sendPresenceError(fro.full(),config.JID,"cancel","conflict")
+                self.debug.loginsLog("User %s has confict login:\n%s" % (fro.full(),j2jh.toXml()))
                 return
             presence=Element((None,'presence'))
             presence.attributes['to']=fro.full()
@@ -224,6 +236,7 @@ class j2jComponent(component.Service):
             self.clients[fro.full()]=Client(el,self.reactor,self,fro,clientJid,data[3],data[1],data[4])
         elif self.clients.has_key(fro.full()) and presenceType=="unavailable":
             if self.clients[fro.full()].connected:
+                self.debug.loginsLog("User %s is trying to log out" % (fro.full()))
                 self.clients[fro.full()].xmlstream.sendFooter()
             else:
                 self.disconnect=True
@@ -451,6 +464,7 @@ class j2jComponent(component.Service):
             self.send(pres)
             pres.attributes["type"]="unavailable"
             self.send(pres)
+            self.debug.registrationsLog("Client %s is unregistered" % fro.full())
             return
         formXPath="/iq/query[@xmlns='jabber:iq:register']/x[@xmlns='jabber:x:data'][@type='submit']"
         username=xpath.queryForString(formXPath+"/field[@var='username']/value",el)
@@ -495,6 +509,7 @@ class j2jComponent(component.Service):
             for ajid in config.ADMINS:
                 msg.attributes["to"]=ajid
                 self.send(msg)
+            self.debug.registrationsLog("User %s is registered to guest-jid %s" % (fro.full(), username+"@"+server))
         elif edit:
             data=self.db.getDataById(uid)
             if data[0]!=username or data[2]!=server:
@@ -511,6 +526,7 @@ class j2jComponent(component.Service):
             self.db.execute("UPDATE %s SET username='%s', domain='%s', server='%s', password='%s', port=%s WHERE id='%s'" % (self.db.dbTablePrefix+"users",self.db.dbQuote(username),self.db.dbQuote(domain),self.db.dbQuote(server),self.db.dbQuote(password),str(port),str(uid)))
             self.db.commit()
             self.sendIqResult(fro.full(),config.JID,ID,"jabber:iq:register")
+            self.debug.registrationsLog("User %s has changed registration information to %s" % (fro.full(),username+"@"+server))
 
     def getIqGateway(self,fro,ID):
         iq = Element((None,"iq"))
