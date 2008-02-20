@@ -1,5 +1,7 @@
 import time
 
+__id__ = "$Id$"
+
 class debug:
     def __init__(self, logFile, registrations, logins, xmlLogFile, componentXmlLog, clientsXmlLog, clientJidsToLog):
         self.logFile=logFile
