@@ -225,7 +225,7 @@ class j2jComponent(component.Service):
             js.append(md5.md5(fro.userhost().encode("utf-8")).hexdigest())
             if newmd5 in js:
                 self.sendPresenceError(fro.full(),config.JID,"cancel","conflict")
-                self.debug.loginsLog("User %s has confict login:\n%s" % (fro.full(),j2jh.toXml()))
+                self.debug.loginsLog("User %s has confict login:\n%s" % (fro.full(),el.toXml()))
                 return
             presence=Element((None,'presence'))
             presence.attributes['to']=fro.full()
