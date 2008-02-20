@@ -6,7 +6,8 @@ import sys
 import utils
 import urllib2
 from urllib import urlencode
-from config import config
+import config
+config=config.config()
 from roster import roster
 from twisted.names.error import DNSNameError
 from twisted.internet.error import DNSLookupError,TimeoutError,ConnectionDone
