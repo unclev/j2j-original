@@ -24,11 +24,11 @@ class config:
         self.DB_PREFIX=unicode(config.get("database","Prefix"),"utf-8")
 
         self.LOGFILE=config.get("debug","logfile")
-        self.DEBUG_REGISTRATIONS=config.get("debug","registrations")
-        self.DEBUG_LOGINS=config.get("debug","logins")
+        self.DEBUG_REGISTRATIONS=config.getboolean("debug","registrations")
+        self.DEBUG_LOGINS=config.getboolean("debug","logins")
         self.DEBUG_XMLLOG=config.get("debug","xml_logging")
-        self.DEBUG_COMPXML=config.get("debug","component_xml")
-        self.DEBUG_CLXML=config.get("debug","clients_xml")
+        self.DEBUG_COMPXML=config.getboolean("debug","component_xml")
+        self.DEBUG_CLXML=config.getboolean("debug","clients_xml")
         self.DEBUG_CLXMLACL=config.get("debug","clients_jids_to_log")
 
         admins=unicode(config.get("admins","List"),"utf-8")
