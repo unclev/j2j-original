@@ -1,6 +1,8 @@
 # Part of J2J (http://JRuDevels.org)
 # Copyright 2008 JRuDevels.org
 
+__id__ = "$Id$"
+
 class config:
 
     def __init__(self, configname=["j2j.conf","~/.j2j/j2j.conf","/etc/j2j/j2j.conf"]):

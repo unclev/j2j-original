@@ -23,7 +23,7 @@ def usage():
     print "See http://wiki.jrudevels.org/J2J for help"
 
 def main():
-    __all__=['j2j','client','database','roster','utils','adhoc']
+    __all__=['j2j','client','database','roster','utils','adhoc','debug','config']
     revision=0
     date=0
 
