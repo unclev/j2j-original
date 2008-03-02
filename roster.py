@@ -61,6 +61,13 @@ class roster:
             return
         iqType=el.attributes["type"]
         if not iqType in ["set","result"]: return
+        if not self.host.presenceSent:
+            presence=Element((None,'presence'))
+            presence.attributes['to']=self.host.host_jid.full()
+            presence.attributes['from']=self.host.config.JID
+            presence.addElement('status',content="Online")
+            self.host.component.send(presence)
+            self.host.presenceSent=True
         for query in el.elements():
             for item in query.elements():
                 if item.name=="item":

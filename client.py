@@ -175,6 +175,7 @@ class Client(object):
         self.secret=secret
         self.mail_time=0
         self.mail_tid=0
+        self.presenceSent=False
         a = XMPPAndGoogleAuthenticator(client_jid, secret, self)
         self.f = ClientFactory(a,self)
         self.f.addBootstrap(xmlstream.STREAM_CONNECTED_EVENT, self.onConnected)
@@ -233,12 +234,6 @@ class Client(object):
         if self.disconnect:
             xs.sendFooter()
             return
-
-        presence=Element((None,'presence'))
-        presence.attributes['to']=self.host_jid.full()
-        presence.attributes['from']=self.config.JID
-        presence.addElement('status',content="Online")
-        self.component.send(presence)
 
         self.xmlstream.addObserver("/iq/query[@xmlns='jabber:iq:roster']",self.roster.onIq)
         self.xmlstream.addObserver("/message",self.onMessage)
