@@ -13,15 +13,6 @@ from twisted.words.protocols.jabber import component
 from twisted.internet import reactor
 import getopt,sys
 
-def usage():
-    print "./main.py [OPTIONS]"
-    print " -h or --help             This help"
-    print " -v or --version          Show version of J2J"
-    print " -c file or --config=file Use another configuration file (defaults to: /etc/j2j/j2j.conf)"
-    print
-    print "See j2j.conf.example for example of configuration file"
-    print "See http://wiki.jrudevels.org/J2J for help"
-
 def main():
     __all__=['j2j','client','database','roster','utils','adhoc','debug','config']
     revision=0
@@ -64,25 +55,13 @@ def main():
 
     version="1.1.8"+revision
 
-    try:
-        opts, args=getopt.getopt(sys.argv[1:], "c:vo:ho", ["help","config=","version"])
-    except getopt.GetoptError, err:
-        print str(err)
-        usage()
-        sys.exit(2)
-    configFile=None
-    for o,a in opts:
-        if o in ("-v", "--version"):
-            print "Jabber-To-Jabber component version:"+version
-            sys.exit()
-        elif o in ("-h", "--help"):
-            usage()
-            sys.exit()
-        elif o in ("-c", "--config"):
-            configFile=a
-        else:
-            assert False, "unhandled option"
     import config
+    from optparse import OptionParser
+    parser = OptionParser(version="Jabber-To-Jabber component version: "+version)
+    parser.add_option('-c','--config', metavar='FILE', dest='configFile', help="Read config from custom file")
+    (options,args) = parser.parse_args()
+    configFile = options.configFile
+
     if configFile:
         config=config.config(configFile)
     else:
