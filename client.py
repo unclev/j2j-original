@@ -6,8 +6,6 @@ import sys
 import utils
 import urllib2
 from urllib import urlencode
-import config
-config=config.config()
 from roster import roster
 from twisted.names.error import DNSNameError
 from twisted.internet.error import DNSLookupError,TimeoutError,ConnectionDone
@@ -148,7 +146,7 @@ class ClientFactory(xmlstream.XmlStreamFactory):
         elif reason.check(TimeoutError):
             error="remote-server-timeout"
             cond="wait"
-        self.host.component.sendPresenceError(self.host.host_jid.full(),config.JID,cond,error)
+        self.host.component.sendPresenceError(self.host.host_jid.full(),self.host.config.JID,cond,error)
         self.host.component.deleteClient(self.host.host_jid)
 
     def clientConnectionLost(self, connector, reason):
@@ -156,6 +154,7 @@ class ClientFactory(xmlstream.XmlStreamFactory):
 
 class Client(object):
     def __init__(self, el, reactor, component, host_jid, client_jid, server, secret, port=5222):
+        self.config=component.config
         self.xmlstream=None
         self.isGTalk=False
         self.presences = {}
@@ -212,7 +211,7 @@ class Client(object):
         if not self.error:
             presence=Element((None,'presence'))
             presence.attributes['to']=self.host_jid.full()
-            presence.attributes['from']=config.JID
+            presence.attributes['from']=self.config.JID
             presence.attributes['type']='unavailable'
             presence.addElement('status',content="Disconnected")
             self.component.send(presence)
@@ -222,11 +221,11 @@ class Client(object):
             unPres.attributes["to"]=self.host_jid.full()
             unPres.attributes["type"]="unavailable"
             for ojid in self.presences_available_full:
-                unPres.attributes["from"]=utils.quoteJID(ojid)
+                unPres.attributes["from"]=utils.quoteJID(ojid,self.config.JID)
                 self.component.send(unPres)
             for ojid in self.presences.keys():
                 if self.component.db.getCount('rosters',"id='%s' AND jid='%s'" % (str(uid),ojid.split("/")[0].encode('utf-8'))):
-                    unPres.attributes["from"]=utils.quoteJID(ojid)
+                    unPres.attributes["from"]=utils.quoteJID(ojid,self.config.JID)
                     self.component.send(unPres)
         self.component.deleteClient(self.host_jid)
 
@@ -237,7 +236,7 @@ class Client(object):
 
         presence=Element((None,'presence'))
         presence.attributes['to']=self.host_jid.full()
-        presence.attributes['from']=config.JID
+        presence.attributes['from']=self.config.JID
         presence.addElement('status',content="Online")
         self.component.send(presence)
 
@@ -308,7 +307,7 @@ class Client(object):
             if self.component.adhoc.vCardSids[iqId][0].full()==self.host_jid.full():
                 iq=Element((None,"iq"))
                 iq.attributes["to"]=self.component.adhoc.vCardSids[iqId][0].full()
-                iq.attributes["from"]=config.JID
+                iq.attributes["from"]=self.config.JID
                 iq.attributes["id"]=self.component.adhoc.vCardSids[iqId][1]
                 iq.attributes["type"]="result"
                 command=utils.createCommand(iq,"replicate_vCard","completed",iqId)
@@ -328,7 +327,7 @@ class Client(object):
         if nodes:
             for node in nodes:
                 if node.attributes.has_key("jid"):
-                    node.attributes["jid"]=utils.quoteJID(node.attributes["jid"])
+                    node.attributes["jid"]=utils.quoteJID(node.attributes["jid"],self.config.JID)
         if xpath.XPathQuery('/iq/query[@xmlns="jabber:iq:gateway"]/jid').matches(el):
             nodes=xpath.XPathQuery('/iq[@type="result"]/query[@xmlns="jabber:iq:gateway"]').queryForNodes(el)
             if nodes:
@@ -337,7 +336,7 @@ class Client(object):
                     for jnode in node.elements():
                         if jnode.name=="jid": ujid=unicode(jnode)
                     node.children=[]
-                    node.addElement("jid",content=utils.quoteJID(ujid))
+                    node.addElement("jid",content=utils.quoteJID(ujid,self.config.JID))
 
         self.route(el)
 
@@ -394,7 +393,7 @@ class Client(object):
                     msgs.reverse()
                     for a in msgs:
                         msg=Element((None,"message"))
-                        msg.attributes["from"]=config.JID
+                        msg.attributes["from"]=self.config.JID
                         msg.attributes["to"]=self.host_jid.full()
                         msg.attributes["type"]="headline"
                         msg.addElement("subject",content="Google New Mail Notify")
@@ -410,7 +409,7 @@ class Client(object):
 
             if firstTime and options[1] and total>0:
                 msg=Element((None,"message"))
-                msg.attributes["from"]=config.JID
+                msg.attributes["from"]=self.config.JID
                 msg.attributes["to"]=self.host_jid.full()
                 msg.attributes["type"]="headline"
                 msg.addElement("subject",content="Google New Mail Notify")
@@ -429,7 +428,7 @@ class Client(object):
             to=internJID(to)
         except:
             return
-        el.attributes["from"]=utils.quoteJID(fro.full())
+        el.attributes["from"]=utils.quoteJID(fro.full(),self.config.JID)
         if to.full()==to.userhost():
             el.attributes["to"]=self.host_jid.userhost()
         else:
@@ -475,7 +474,7 @@ class Client(object):
 
         if failure.check(StanzaError,SASLNoAcceptableMechanism,SASLAuthError):
             self.error=True
-            self.component.sendPresenceError(self.host_jid.full(),config.JID,"auth",'not-authorized')
+            self.component.sendPresenceError(self.host_jid.full(),self.config.JID,"auth",'not-authorized')
             self.onDisconnected(None)
             return
 

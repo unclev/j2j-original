@@ -1,23 +1,21 @@
 # Part of J2J (http://JRuDevels.org)
 # Copyright 2007 JRuDevels.org
 
-import config
-config=config.config()
-
 __id__ = "$Id$"
 
 class database:
-    def __init__(self):
-        if config.DB_TYPE == "mysql":
+    def __init__(self,config):
+        self.config=config
+        if self.config.DB_TYPE == "mysql":
             exec 'import MySQLdb'
-            self.db=MySQLdb.connect(host=config.DB_HOST,user=config.DB_USER,passwd=config.DB_PASS,db=config.DB_NAME)
-        elif config.DB_TYPE == "postgres":
+            self.db=MySQLdb.connect(host=self.config.DB_HOST,user=self.config.DB_USER,passwd=self.config.DB_PASS,db=self.config.DB_NAME)
+        elif self.config.DB_TYPE == "postgres":
             exec 'import pgdb'
-            self.db=pgdb.connect(host=config.DB_HOST,user=config.DB_USER,password=config.DB_PASS,database=config.DB_NAME)
+            self.db=pgdb.connect(host=self.config.DB_HOST,user=self.config.DB_USER,password=self.config.DB_PASS,database=self.config.DB_NAME)
         else:
             self.db = None
         self.dbCursor=self.db.cursor()
-        self.dbTablePrefix=config.DB_PREFIX
+        self.dbTablePrefix=self.config.DB_PREFIX
 
     def __del__(self):
         if self.dbCursor:

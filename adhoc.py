@@ -3,8 +3,6 @@
 
 import utils
 import time
-import config
-config=config.config()
 from twisted.words.xish.domish import Element
 from twisted.words.xish import xpath
 
@@ -19,6 +17,7 @@ class adHoc:
         self.vCardSids={}
 
         self.component=component
+        self.config=component.config
 
     def getSid(self):
         ret=time.strftime("%Y%m%dT%H%M%S",time.localtime(time.time()))+"-"+str(self.sid)
@@ -27,7 +26,7 @@ class adHoc:
 
     def getCommandsList(self,query):
         for commandNode in self.commands.keys():
-            utils.addDiscoItem(query,config.JID,self.commands[commandNode][0],commandNode)
+            utils.addDiscoItem(query,self.config.JID,self.commands[commandNode][0],commandNode)
 
     def onCommand(self,el,fro,ID,node):
         sid=el.getAttribute('sessionid')
@@ -36,7 +35,7 @@ class adHoc:
 
         iq=Element((None,"iq"))
         iq.attributes["to"]=fro.full()
-        iq.attributes["from"]=config.JID
+        iq.attributes["from"]=self.config.JID
         iq.attributes["id"]=ID
         iq.attributes["type"]="result"
 
@@ -80,7 +79,7 @@ class adHoc:
             return
         el = Element((None, "iq"))
         el.attributes["to"]=fro.userhost()
-        el.attributes["from"]=config.JID
+        el.attributes["from"]=self.config.JID
         el.attributes["id"]=sid
         el.attributes["type"]="get"
         vc=el.addElement("vCard")

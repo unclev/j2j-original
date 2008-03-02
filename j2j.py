@@ -10,8 +10,6 @@ if __name__=='__main__':
     sys.exit(0)
 
 import md5
-import config
-config=config.config()
 import debug
 from client import Client
 from adhoc import adHoc
@@ -31,7 +29,8 @@ sys.setdefaultencoding("utf-8")
 sys.stdout = codecs.lookup('utf-8')[-1](sys.stdout)
 
 class j2jComponent(component.Service):
-    def __init__(self,reactor,version):
+    def __init__(self,reactor,version,config):
+        self.config=config
         self.reactor=reactor
         self.adhoc=adHoc(self)
         self.VERSION=version
@@ -45,8 +44,8 @@ class j2jComponent(component.Service):
         except:
             pass
         self.clients = {}
-        self.debug=debug.debug(config.LOGFILE,config.DEBUG_REGISTRATIONS,config.DEBUG_LOGINS,config.DEBUG_XMLLOG,config.DEBUG_COMPXML,config.DEBUG_CLXML,config.DEBUG_CLXMLACL)
-        self.db=database.database()
+        self.debug=debug.debug(self.config.LOGFILE,self.config.DEBUG_REGISTRATIONS,self.config.DEBUG_LOGINS,self.config.DEBUG_XMLLOG,self.config.DEBUG_COMPXML,self.config.DEBUG_CLXML,self.config.DEBUG_CLXMLACL)
+        self.db=database.database(self.config)
         self.xmlstream = xs
         self.xmlstream.rawDataInFn=self.rawIn
         self.xmlstream.rawDataOutFn=self.rawOut
@@ -69,7 +68,7 @@ class j2jComponent(component.Service):
             to=internJID(to)
         except:
             return
-        if to.full()==config.JID: return
+        if to.full()==self.config.JID: return
         uid=self.db.getIdByJid(fro.userhost())
         if not uid:
             self.sendMessageError(to=fro.full(),fro=to.full(),etype="auth",condition="registration-required")
@@ -95,7 +94,7 @@ class j2jComponent(component.Service):
         elif not self.clients.has_key(fro.full()):
             return
 
-        el.attributes['to'] = utils.unquoteJID(to.full())
+        el.attributes['to'] = utils.unquoteJID(to.full(),self.config.JID)
         del el.attributes['from']
         utils.delUri(el)
 
@@ -116,21 +115,21 @@ class j2jComponent(component.Service):
             self.sendPresenceError(to=fro.full(),fro=to.full(),etype="auth",condition="registration-required")
             return
 
-        if to.full()==config.JID:
+        if to.full()==self.config.JID:
             self.componentPresence(el,fro,presenceType)
             return
 
         if presenceType=="available" or presenceType==None:
             froStr=fro.full()
             if not self.clients.has_key(fro.full()): return
-            if not utils.unquoteJID(to.userhost()) in self.clients[froStr].presences_available:
-                self.clients[froStr].presences_available.append(utils.unquoteJID(to.userhost()))
-            if not utils.unquoteJID(to.full()) in self.clients[froStr].presences_available_full:
-                self.clients[froStr].presences_available_full.append(utils.unquoteJID(to.full()))
+            if not utils.unquoteJID(to.userhost(),self.config.JID) in self.clients[froStr].presences_available:
+                self.clients[froStr].presences_available.append(utils.unquoteJID(to.userhost(),self.config.JID))
+            if not utils.unquoteJID(to.full(),self.config.JID) in self.clients[froStr].presences_available_full:
+                self.clients[froStr].presences_available_full.append(utils.unquoteJID(to.full(),self.config.JID))
 
         if presenceType=="subscribe":
             froStr=fro.userhost()
-            toUnq=utils.unquoteJID(to.userhost())
+            toUnq=utils.unquoteJID(to.userhost(),self.config.JID)
             f=False
             for cl in self.clients.keys():
                 if cl.find(froStr+"/")==0:
@@ -156,14 +155,14 @@ class j2jComponent(component.Service):
                     for pr in self.clients[cl].presences.keys():
                         if pr.split('/')[0]==toUnq:
                             pres=self.clients[froStr].presences[pr]
-                            pres.attributes["from"]=utils.quoteJID(pr)
+                            pres.attributes["from"]=utils.quoteJID(pr,self.config.JID)
                             pres.attributes["to"]=fro.full()
                             utils.delUri(pres)
                             self.send(pres)
                     return
 
         if presenceType=="unsubscribe" or presenceType=="unsubscribed":
-            toUnq=utils.unquoteJID(to.full())
+            toUnq=utils.unquoteJID(to.full(),self.config.JID)
             if self.db.getCount('rosters',"id='%s' AND jid='%s'" % (str(uid),toUnq.encode("utf-8"))):
                 self.db.execute("DELETE FROM %s WHERE id='%s' AND jid='%s'" % (self.db.dbTablePrefix+"rosters", str(uid), self.db.dbQuote(toUnq.encode('utf-8'))))
                 self.db.commit()
@@ -179,7 +178,7 @@ class j2jComponent(component.Service):
     def componentPresence(self,el,fro,presenceType):
         uid=self.db.getIdByJid(fro.userhost())
         if not uid:
-            #self.sendPresenceError(to=fro.full(),fro=config.JID,etype="cancel",condition="registration-required")
+            #self.sendPresenceError(to=fro.full(),fro=self.config.JID,etype="cancel",condition="registration-required")
             return
         data=self.db.getDataById(uid)
         resource=jid.parse(fro.full())[2]
@@ -190,7 +189,7 @@ class j2jComponent(component.Service):
         try:
             clientJid=jid.JID(data[0]+"@"+data[2]+resource)
         except:
-            self.sendPresenceError(to=fro.full(),fro=config.JID,etype="modify",condition="not-acceptable")
+            self.sendPresenceError(to=fro.full(),fro=self.config.JID,etype="modify",condition="not-acceptable")
             return
         if data[3]==None or data[3]=='':
             data[3]=data[2]
@@ -210,26 +209,26 @@ class j2jComponent(component.Service):
                     except:
                         hops=0
                     if hops>3:
-                        self.sendPresenceError(fro.full(),config.JID,"cancel","not-allowed")
+                        self.sendPresenceError(fro.full(),self.config.JID,"cancel","not-allowed")
                         return
                     element.attributes["hops"]=str(hops+1)
                     for jidmd5 in element.elements():
                         if jidmd5.name=="jid":
                             js.append(unicode(jidmd5))
-                    element.addElement("jid",content=md5.md5(fro.userhost().encode("utf-8")).hexdigest()).attributes["gateway"]=config.JID
+                    element.addElement("jid",content=md5.md5(fro.userhost().encode("utf-8")).hexdigest()).attributes["gateway"]=self.config.JID
             if js==[]:
                 j2jh=el.addElement("x")
                 j2jh.attributes["xmlns"]="j2j:history"
                 j2jh.attributes["hops"]="1"
-                j2jh.addElement("jid",content=md5.md5(fro.userhost().encode("utf-8")).hexdigest()).attributes["gateway"]=config.JID
+                j2jh.addElement("jid",content=md5.md5(fro.userhost().encode("utf-8")).hexdigest()).attributes["gateway"]=self.config.JID
             js.append(md5.md5(fro.userhost().encode("utf-8")).hexdigest())
             if newmd5 in js:
-                self.sendPresenceError(fro.full(),config.JID,"cancel","conflict")
+                self.sendPresenceError(fro.full(),self.config.JID,"cancel","conflict")
                 self.debug.loginsLog("User %s has confict login:\n%s" % (fro.full(),el.toXml()))
                 return
             presence=Element((None,'presence'))
             presence.attributes['to']=fro.full()
-            presence.attributes['from']=config.JID
+            presence.attributes['from']=self.config.JID
             presence.attributes['type']='unavailable'
             presence.addElement('status',content="Logging in...")
             self.send(presence)
@@ -249,7 +248,7 @@ class j2jComponent(component.Service):
         elif presenceType=="subscribe":
             presence=Element((None,'presence'))
             presence.attributes['to']=fro.full()
-            presence.attributes['from']=config.JID
+            presence.attributes['from']=self.config.JID
             presence.attributes['type']='subscribed'
             self.send(presence)
 
@@ -267,7 +266,7 @@ class j2jComponent(component.Service):
             to=internJID(to)
         except Exception, e:
             return
-        if to.full()==config.JID:
+        if to.full()==self.config.JID:
             self.componentIq(el,fro,ID,iqType)
             return
         uid=self.db.getIdByJid(fro.userhost())
@@ -336,7 +335,7 @@ class j2jComponent(component.Service):
                 self.getStats(el,fro,ID)
                 return
 
-            self.sendIqError(to=fro.full(), fro=config.JID, ID=ID, etype="cancel", condition="feature-not-implemented")
+            self.sendIqError(to=fro.full(), fro=self.config.JID, ID=ID, etype="cancel", condition="feature-not-implemented")
 
     def result_vCard(self,el,fro,ID):
         if not ID in self.adhoc.vCardSids.keys():
@@ -354,7 +353,7 @@ class j2jComponent(component.Service):
     def getStats(self,el,fro,ID):
         iq = Element((None,"iq"))
         iq.attributes["type"]="result"
-        iq.attributes["from"]=config.JID
+        iq.attributes["from"]=self.config.JID
         iq.attributes["to"]=fro.full()
         if ID:
             iq.attributes["id"]=ID
@@ -381,7 +380,7 @@ class j2jComponent(component.Service):
     def getvcard(self,fro,ID):
         iq = Element((None,"iq"))
         iq.attributes["type"]="result"
-        iq.attributes["from"]=config.JID
+        iq.attributes["from"]=self.config.JID
         iq.attributes["to"]=fro.full()
         if ID:
             iq.attributes["id"]=ID
@@ -395,7 +394,7 @@ class j2jComponent(component.Service):
     def getRegister(self,el,fro,ID):
         iq = Element((None,"iq"))
         iq.attributes["type"]="result"
-        iq.attributes["from"]=config.JID
+        iq.attributes["from"]=self.config.JID
         iq.attributes["to"]=fro.full()
         if ID:
             iq.attributes["id"]=ID
@@ -430,7 +429,7 @@ class j2jComponent(component.Service):
             edit=False
         if xpath.XPathQuery("/iq/query[@xmlns='jabber:iq:register']/remove").matches(el):
             if not edit:
-                self.sendIqError(to=fro.full(), fro=config.JID, ID=ID, etype="auth", condition="registration-required")
+                self.sendIqError(to=fro.full(), fro=self.config.JID, ID=ID, etype="auth", condition="registration-required")
                 return
             for j in self.clients.keys():
                 if j.find(fro.userhost()+"/")==0:
@@ -441,11 +440,11 @@ class j2jComponent(component.Service):
             unPres.attributes["type"]="unavailable"
             if self.clients.has_key(fro.full()):
                 for ojid in self.clients[fro.full()].presences_available_full:
-                    unPres.attributes["from"]=utils.quoteJID(ojid)
+                    unPres.attributes["from"]=utils.quoteJID(ojid,self.config.JID)
                     self.send(unPres)
             ujids=self.db.fetchall("SELECT jid FROM %s WHERE id='%s'" % (self.db.dbTablePrefix+"rosters",str(uid)))
             for ojid in ujids:
-                unPres.attributes["from"]=utils.quoteJID(ojid[0])
+                unPres.attributes["from"]=utils.quoteJID(ojid[0],self.config.JID)
                 unPres.attributes["type"]="unsubscribe"
                 self.send(unPres)
                 unPres.attributes["type"]="unsubscribed"
@@ -454,10 +453,10 @@ class j2jComponent(component.Service):
             self.db.execute("DELETE from "+self.db.dbTablePrefix+"users_options WHERE id="+str(uid))
             self.db.execute("DELETE from "+self.db.dbTablePrefix+"users WHERE id="+str(uid))
             self.db.commit()
-            self.sendIqResult(fro.full(),config.JID,ID,"jabber:iq:register")
+            self.sendIqResult(fro.full(),self.config.JID,ID,"jabber:iq:register")
             pres=Element((None,"presence"))
             pres.attributes["to"]=fro.full()
-            pres.attributes["from"]=config.JID
+            pres.attributes["from"]=self.config.JID
             pres.attributes["type"]="unsubscribe"
             self.send(pres)
             pres.attributes["type"]="unsubscribed"
@@ -469,20 +468,20 @@ class j2jComponent(component.Service):
         formXPath="/iq/query[@xmlns='jabber:iq:register']/x[@xmlns='jabber:x:data'][@type='submit']"
         username=xpath.queryForString(formXPath+"/field[@var='username']/value",el)
         if username=='':
-            self.sendIqError(to=fro.full(), fro=config.JID, ID=ID, etype="modify", condition="not-acceptable")
+            self.sendIqError(to=fro.full(), fro=self.config.JID, ID=ID, etype="modify", condition="not-acceptable")
             return
         password=xpath.XPathQuery(formXPath+"/field[@var='password']/value").queryForString(el)
         if password=='':
-            self.sendIqError(to=fro.full(), fro=config.JID, ID=ID, etype="modify", condition="not-acceptable")
+            self.sendIqError(to=fro.full(), fro=self.config.JID, ID=ID, etype="modify", condition="not-acceptable")
             return
         server=xpath.XPathQuery(formXPath+"/field[@var='server']/value").queryForString(el)
         if server=='':
-            self.sendIqError(to=fro.full(), fro=config.JID, ID=ID, etype="modify", condition="not-acceptable")
+            self.sendIqError(to=fro.full(), fro=self.config.JID, ID=ID, etype="modify", condition="not-acceptable")
             return
         try:
             hjid=jid.JID(username+"@"+server)
         except:
-            self.sendIqError(to=fro.full(), fro=config.JID, ID=ID, etype='modify',condition='not-acceptable')
+            self.sendIqError(to=fro.full(), fro=self.config.JID, ID=ID, etype='modify',condition='not-acceptable')
             return
         domain=xpath.XPathQuery(formXPath+"/field[@var='domain']/value").queryForString(el)
         port=xpath.XPathQuery(formXPath+"/field[@var='port']/value").queryForString(el)
@@ -495,18 +494,18 @@ class j2jComponent(component.Service):
             uid=self.db.getIdByJid(fro.userhost())
             self.db.execute("INSERT INTO "+self.db.dbTablePrefix+"users_options ( id ) VALUES  ('"+str(uid)+"')")
             self.db.commit()
-            self.sendIqResult(fro.full(),config.JID,ID,"jabber:iq:register")
+            self.sendIqResult(fro.full(),self.config.JID,ID,"jabber:iq:register")
             pres=Element((None,"presence"))
             pres.attributes["to"]=fro.userhost()
-            pres.attributes["from"]=config.JID
+            pres.attributes["from"]=self.config.JID
             pres.attributes["type"]="subscribe"
             self.send(pres)
-            if config.ADMINS!=[]:
+            if self.config.ADMINS!=[]:
                 msg=Element((None,"message"))
                 msg.attributes["type"]="chat"
-                msg.attributes["from"]=config.JID
-                msg.addElement("body",content="J2J %s Registration notify:\nHost JID:%s\nGuest JID:%s" % (config.JID,fro.full(),username+"@"+server))
-            for ajid in config.ADMINS:
+                msg.attributes["from"]=self.config.JID
+                msg.addElement("body",content="J2J %s Registration notify:\nHost JID:%s\nGuest JID:%s" % (self.config.JID,fro.full(),username+"@"+server))
+            for ajid in self.config.ADMINS:
                 msg.attributes["to"]=ajid
                 self.send(msg)
             self.debug.registrationsLog("User %s is registered to guest-jid %s" % (fro.full(), username+"@"+server))
@@ -517,7 +516,7 @@ class j2jComponent(component.Service):
                 for unjid in a:
                     pres=Element((None,"presence"))
                     pres.attributes["to"]=fro.userhost()
-                    pres.attributes["from"]=utils.quoteJID(unjid[0])
+                    pres.attributes["from"]=utils.quoteJID(unjid[0],self.config.JID)
                     pres.attributes["type"]="unsubscribe"
                     self.send(pres)
                     pres.attributes["type"]="unsubscribed"
@@ -525,13 +524,13 @@ class j2jComponent(component.Service):
                 self.db.execute("DELETE FROM %s WHERE id='%s'" % (self.db.dbTablePrefix+"rosters",str(uid)))
             self.db.execute("UPDATE %s SET username='%s', domain='%s', server='%s', password='%s', port=%s WHERE id='%s'" % (self.db.dbTablePrefix+"users",self.db.dbQuote(username),self.db.dbQuote(domain),self.db.dbQuote(server),self.db.dbQuote(password),str(port),str(uid)))
             self.db.commit()
-            self.sendIqResult(fro.full(),config.JID,ID,"jabber:iq:register")
+            self.sendIqResult(fro.full(),self.config.JID,ID,"jabber:iq:register")
             self.debug.registrationsLog("User %s has changed registration information to %s" % (fro.full(),username+"@"+server))
 
     def getIqGateway(self,fro,ID):
         iq = Element((None,"iq"))
         iq.attributes["type"]="result"
-        iq.attributes["from"]=config.JID
+        iq.attributes["from"]=self.config.JID
         iq.attributes["to"]=fro.full()
         if ID:
             iq.attributes["id"]=ID
@@ -544,7 +543,7 @@ class j2jComponent(component.Service):
     def setIqGateway(self,el,fro,ID):
         iq = Element((None,"iq"))
         iq.attributes["type"]="result"
-        iq.attributes["from"]=config.JID
+        iq.attributes["from"]=self.config.JID
         iq.attributes["to"]=fro.full()
         if ID:
             iq.attributes["id"]=ID
@@ -553,13 +552,13 @@ class j2jComponent(component.Service):
             prompt=''
         query=iq.addElement("query")
         query.attributes["xmlns"]="jabber:iq:gateway"
-        query.addElement("jid",content=utils.quoteJID(prompt))
+        query.addElement("jid",content=utils.quoteJID(prompt,self.config.JID))
         self.send(iq)
 
     def getLast(self,fro,ID):
         iq = Element((None,"iq"))
         iq.attributes["type"]="result"
-        iq.attributes["from"]=config.JID
+        iq.attributes["from"]=self.config.JID
         iq.attributes["to"]=fro.full()
         if ID:
             iq.attributes["id"]=ID
@@ -571,7 +570,7 @@ class j2jComponent(component.Service):
     def getVersion(self,fro,ID):
         iq = Element((None,"iq"))
         iq.attributes["type"]="result"
-        iq.attributes["from"]=config.JID
+        iq.attributes["from"]=self.config.JID
         iq.attributes["to"]=fro.full()
         if ID:
             iq.attributes["id"]=ID
@@ -584,7 +583,7 @@ class j2jComponent(component.Service):
     def getDiscoInfo(self,el,fro,ID,node):
         iq = Element((None, "iq"))
         iq.attributes["type"] = "result"
-        iq.attributes["from"] = config.JID
+        iq.attributes["from"] = self.config.JID
         iq.attributes["to"] = fro.full()
         if ID:
             iq.attributes["id"] = ID
@@ -601,7 +600,7 @@ class j2jComponent(component.Service):
                 if self.adhoc.commands[node][3]:
                     uid=self.db.getIdByJid(fro.userhost())
                     if not uid:
-                        self.sendIqError(to=fro.full(), fro=config.JID, ID=ID, etype="auth", condition="not-authorized")
+                        self.sendIqError(to=fro.full(), fro=self.config.JID, ID=ID, etype="auth", condition="not-authorized")
                         return
                 identity=query.addElement("identity")
                 identity.attributes["name"]=self.adhoc.commands[node][0]
@@ -609,7 +608,7 @@ class j2jComponent(component.Service):
                 identity.attributes["type"]="command-node"
                 query.addElement("feature").attributes["var"]="http://jabber.org/protocol/commands"
                 query.addElement("feature").attributes["var"]="jabber:x:data"
-            if (node.startswith("groster") and self.clients.has_key(fro.full())) or (node.startswith("users") and fro.userhost() in config.ADMINS):
+            if (node.startswith("groster") and self.clients.has_key(fro.full())) or (node.startswith("users") and fro.userhost() in self.config.ADMINS):
                 query.addElement("feature").attributes["var"]="http://jabber.org/protocol/disco#items"
                 query.addElement("feature").attributes["var"]="http://jabber.org/protocol/disco#info"
         else:
@@ -631,7 +630,7 @@ class j2jComponent(component.Service):
     def getDiscoItems(self,el,fro,ID,node):
         iq = Element((None,"iq"))
         iq.attributes["type"] = "result"
-        iq.attributes["from"] = config.JID
+        iq.attributes["from"] = self.config.JID
         iq.attributes["to"] = fro.full()
         if ID:
             iq.attributes["id"] = ID
@@ -640,34 +639,34 @@ class j2jComponent(component.Service):
         if node:
             query.attributes["node"] = node
         if node==None:
-            utils.addDiscoItem(query,config.JID,"Commands",'http://jabber.org/protocol/commands')
+            utils.addDiscoItem(query,self.config.JID,"Commands",'http://jabber.org/protocol/commands')
             self.adhoc.getCommandsList(query)
-            if fro.userhost() in config.ADMINS:
-                utils.addDiscoItem(query,config.JID,"Users",'users')
+            if fro.userhost() in self.config.ADMINS:
+                utils.addDiscoItem(query,self.config.JID,"Users",'users')
             if self.clients.has_key(fro.full()):
-                utils.addDiscoItem(query,utils.quoteJID(self.clients[fro.full()].client_jid.host),"Guest's server Discovery")
-                utils.addDiscoItem(query,config.JID,"Guest roster","groster")
+                utils.addDiscoItem(query,utils.quoteJID(self.clients[fro.full()].client_jid.host,self.config.JID),"Guest's server Discovery")
+                utils.addDiscoItem(query,self.config.JID,"Guest roster","groster")
         elif node=="groster" and self.clients.has_key(fro.full()):
             groups = self.clients[fro.full()].roster.getGroups()
             for group in groups:
-                utils.addDiscoItem(query,config.JID,group,"groster/"+group)
-        elif node=="users" and (fro.userhost() in config.ADMINS):
-            utils.addDiscoItem(query,config.JID,"Online users",'users/online')
-        elif node=="users/online" and (fro.userhost() in config.ADMINS):
+                utils.addDiscoItem(query,self.config.JID,group,"groster/"+group)
+        elif node=="users" and (fro.userhost() in self.config.ADMINS):
+            utils.addDiscoItem(query,self.config.JID,"Online users",'users/online')
+        elif node=="users/online" and (fro.userhost() in self.config.ADMINS):
             for user in self.clients.keys():
                 utils.addDiscoItem(query,user)
         elif node.startswith("groster/") and self.clients.has_key(fro.full()):
             group=node[8:]
             contacts=self.clients[fro.full()].roster.getAllInGroup(group)
             for contact in contacts:
-                utils.addDiscoItem(query,utils.quoteJID(contact[0]),contact[1])
+                utils.addDiscoItem(query,utils.quoteJID(contact[0],self.config.JID),contact[1])
         elif node=="http://jabber.org/protocol/commands":
             self.adhoc.getCommandsList(query)
         elif node in self.adhoc.commands.keys():
             if self.adhoc.commands[node][3]:
                 uid=self.db.getIdByJid(fro.userhost())
                 if not uid:
-                    self.sendIqError(to=fro.full(), fro=config.JID, ID=ID, etype="auth", condition="not-authorized")
+                    self.sendIqError(to=fro.full(), fro=self.config.JID, ID=ID, etype="auth", condition="not-authorized")
                     return
         self.send(iq)
 

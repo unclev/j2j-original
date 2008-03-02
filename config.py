@@ -3,9 +3,11 @@
 
 __id__ = "$Id$"
 
+import os
+
 class config:
 
-    def __init__(self, configname=["j2j.conf","~/.j2j/j2j.conf","/etc/j2j/j2j.conf"]):
+    def __init__(self, configname=["j2j.conf",os.path.expanduser("~/.j2j/j2j.conf"),"/etc/j2j/j2j.conf"]):
         import ConfigParser
         config=ConfigParser.ConfigParser()
         config.read(configname)

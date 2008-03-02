@@ -88,7 +88,7 @@ def main():
     else:
         config=config.config()
 
-    c=j2j.j2jComponent(reactor,version)
+    c=j2j.j2jComponent(reactor,version,config)
     f=component.componentFactory(config.JID,config.PASSWORD)
     connector = component.buildServiceManager(config.JID, config.PASSWORD, "tcp:%s:%s" % (config.HOST, config.PORT))
     c.setServiceParent(connector)

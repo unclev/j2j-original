@@ -2,8 +2,6 @@
 # Copyright 2007 JRuDevels.org
 
 from twisted.words.protocols.jabber import jid
-import config
-config=config.config()
 
 __id__ = "$Id$"
 
@@ -41,31 +39,31 @@ def addDiscoItem(query, jid, name=None, node=None):
         item.attributes["node"]=node
     return item
 
-def quoteJID(ujid):
+def quoteJID(ujid,cJid):
     if ujid=='' or ujid==None:
         return ''
     try:
         els=jid.parse(ujid)
     except:
-        return config.JID
+        return cJid
     if els[0]==None:
         qjid=els[1]
     else:
         qjid=els[0]+"@"+els[1]
     qjid=qjid.replace('%','\\%')
     qjid=qjid.replace('@','%')
-    qjid=qjid+'@'+config.JID
+    qjid=qjid+'@'+cJid
     if ujid.find('/')!=-1:
         qjid=qjid+'/'+els[2]
     return qjid
 
-def unquoteJID(qjid):
+def unquoteJID(qjid,cJid):
     if qjid=='' or qjid==None:
         return ''
     try:
         els=jid.parse(qjid)
     except:
-        return config.JID
+        return cJid
     ujid=els[0]
     ujid=ujid.replace('%','@')
     ujid=ujid.replace('\\@','%')
