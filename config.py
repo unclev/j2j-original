@@ -5,7 +5,7 @@ __id__ = "$Id$"
 
 import os
 
-class config:
+class Config:
 
     def __init__(self, configname=["j2j.conf",os.path.expanduser("~/.j2j/j2j.conf"),"/etc/j2j/j2j.conf"]):
         import ConfigParser

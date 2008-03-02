@@ -12,6 +12,7 @@ import j2j
 from twisted.words.protocols.jabber import component
 from twisted.internet import reactor
 import getopt,sys
+from config import Config
 
 def main():
     __all__=['j2j','client','database','roster','utils','adhoc','debug','config']
@@ -55,7 +56,6 @@ def main():
 
     version="1.1.8"+revision
 
-    import config
     from optparse import OptionParser
     parser = OptionParser(version="Jabber-To-Jabber component version: "+version)
     parser.add_option('-c','--config', metavar='FILE', dest='configFile', help="Read config from custom file")
@@ -63,9 +63,9 @@ def main():
     configFile = options.configFile
 
     if configFile:
-        config=config.config(configFile)
+        config=Config(configFile)
     else:
-        config=config.config()
+        config=Config()
 
     c=j2j.j2jComponent(reactor,version,config)
     f=component.componentFactory(config.JID,config.PASSWORD)
