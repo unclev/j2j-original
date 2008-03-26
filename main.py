@@ -11,11 +11,14 @@
 import j2j
 from twisted.words.protocols.jabber import component
 from twisted.internet import reactor
-import getopt,sys
+import getopt
+import sys
 from config import Config
 
+
 def main():
-    __all__=['j2j','client','database','roster','utils','adhoc','debug','config']
+    __all__=['j2j','client','database','roster',
+             'utils','adhoc','debug','config']
     revision=0
     date=0
 
@@ -57,8 +60,10 @@ def main():
     version="1.1.8"+revision
 
     from optparse import OptionParser
-    parser = OptionParser(version="Jabber-To-Jabber component version: "+version)
-    parser.add_option('-c','--config', metavar='FILE', dest='configFile', help="Read config from custom file")
+    parser = OptionParser(version=
+                          "Jabber-To-Jabber component version:"+version)
+    parser.add_option('-c','--config', metavar='FILE', dest='configFile',
+                      help="Read config from custom file")
     (options,args) = parser.parse_args()
     configFile = options.configFile
 
@@ -69,7 +74,8 @@ def main():
 
     c=j2j.j2jComponent(reactor,version,config)
     f=component.componentFactory(config.JID,config.PASSWORD)
-    connector = component.buildServiceManager(config.JID, config.PASSWORD, "tcp:%s:%s" % (config.HOST, config.PORT))
+    connector = component.buildServiceManager(config.JID, config.PASSWORD,
+                                     "tcp:%s:%s" % (config.HOST, config.PORT))
     c.setServiceParent(connector)
     connector.startService()
     reactor.run()

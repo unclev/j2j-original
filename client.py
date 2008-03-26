@@ -437,7 +437,7 @@ class Client(object):
                 return
         if opts[4]:
             flag=False
-            if el.name=="message": flag=True
+            if el.name=="message" and el.getAttribute("type")!="groupchat" and el.getAttribute("type")!="headline": flag=True
             if el.name=="subscribe" and el.getAttribute("type")=="subscribe":
                 flag=True
                 pres=Element((None,"presence"))
