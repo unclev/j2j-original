@@ -153,7 +153,7 @@ class ClientFactory(xmlstream.XmlStreamFactory):
         self.host.component.debug.loginsLog("User %s has lost connection\n%s" % (self.host.host_jid.full(),str(reason)))
 
 class Client(object):
-    def __init__(self, el, reactor, component, host_jid, client_jid, server, secret, port=5222):
+    def __init__(self, el, reactor, component, host_jid, client_jid, server, secret, port=5222,import_roster=False,remove_from_roster=False):
         self.config=component.config
         self.xmlstream=None
         self.isGTalk=False
@@ -169,6 +169,8 @@ class Client(object):
         self.reactor=reactor
         self.server=server
         self.port=port
+        self.import_roster=import_roster
+        self.remove_from_roster=remove_from_roster
         self.client_jid=client_jid
         self.disconnect=False
         self.error=False

@@ -1,6 +1,8 @@
 # Part of J2J (http://JRuDevels.org)
 # Copyright 2007 JRuDevels.org
 
+import utils
+
 from twisted.words.xish.domish import Element
 
 __id__ = "$Id$"
@@ -76,6 +78,33 @@ class roster:
                         del self.items[r[0]]
                     elif r[1][1]!="remove":
                         self.items[r[0]]=r[1]
+        db=self.host.component.db
+        uid=db.getIdByJid(self.host.host_jid.userhost())
+        if uid and self.host.import_roster:
+            dbroster=db.fetchall("SELECT jid FROM %s WHERE id='%s'" % (db.dbTablePrefix+"rosters",str(uid)))
+            presence=Element((None,'presence'))
+            presence.attributes['to']=self.host.host_jid.userhost()
+            for i in dbroster:
+                jid,=i
+                if not jid in self.items:
+                    presence.attributes['from']=utils.quoteJID(jid,self.host.config.JID)
+                    presence.attributes['type']='unsubscribe'
+                    self.host.component.send(presence)
+                    presence.attributes['type']='unsubscribed'
+                    self.host.component.send(presence)
+                    db.execute("DELETE FROM %s WHERE id='%s' and jid='%s'" % (db.dbTablePrefix+"rosters", str(uid), db.dbQuote(jid.encode("utf-8"))))
+            for jid in self.items.keys():
+                if not jid in dbroster:
+                    presence=Element((None,'presence'))
+                    presence.attributes['to']=self.host.host_jid.userhost()
+                    presence.attributes['type']='subscribe'
+                    presence.attributes['from']=utils.quoteJID(jid,self.host.config.JID)
+                    if self.items[jid][0]:
+                        nickEl=presence.addElement('nick','http://jabber.org/protocol/nick',content=self.items[jid][0])
+                        #nickEl.attributes['xmlns']=''
+                    self.host.component.send(presence)
+                    db.execute("INSERT INTO %s (id,jid) VALUES ('%s','%s')" % (db.dbTablePrefix+"rosters", str(uid), db.dbQuote(jid.encode("utf-8"))))
+            db.commit()
         if iqType=="set":
             result=Element((None,"iq"))
             result.attributes["type"]="result"
@@ -86,3 +115,13 @@ class roster:
             if el.getAttribute("to"):
                 result.attributes["from"]=el.getAttribute("to")
             self.host.xmlstream.send(result)
+
+    def removeItem(self,jid):
+        if jid in self.items.keys():
+            iq=Element((None,'iq'))
+            iq.attributes['type']='set'
+            query=iq.addElement('query','jabber:iq:roster')
+            item=query.addElement('item')
+            item.attributes['jid']=jid
+            item.attributes['subscription']='remove'
+            self.host.xmlstream.send(iq)

@@ -13,6 +13,8 @@ CREATE TABLE j2j_users (
     server varchar(255),
     `password` varchar(255),
     port integer,
+    import_roster boolean DEFAULT false,
+    remove_from_guest_roster boolean DEFAULT false,
     primary key(id)
 );
 

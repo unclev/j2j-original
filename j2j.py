@@ -127,14 +127,15 @@ class j2jComponent(component.Service):
             if not utils.unquoteJID(to.full(),self.config.JID) in self.clients[froStr].presences_available_full:
                 self.clients[froStr].presences_available_full.append(utils.unquoteJID(to.full(),self.config.JID))
 
-        if presenceType=="subscribe":
-            froStr=fro.userhost()
-            toUnq=utils.unquoteJID(to.userhost(),self.config.JID)
+        froStr=fro.userhost()
+        if presenceType in ('subscribe','unsubscribe','unsubscribed'):
             f=False
             for cl in self.clients.keys():
                 if cl.find(froStr+"/")==0:
                     f=True
                     froStr=cl
+        if presenceType=="subscribe":
+            toUnq=utils.unquoteJID(to.userhost(),self.config.JID)
             if not f:
                 return
             if not self.db.getCount('rosters',"id='%s' AND jid='%s'" % (str(uid),toUnq.encode("utf-8"))):
@@ -171,7 +172,10 @@ class j2jComponent(component.Service):
                 p.attributes["from"]=to.userhost()
                 p.attributes["type"]="unsubscribed"
                 self.send(p)
-                return
+                if self.clients[froStr].remove_from_roster and f:
+                    self.clients[froStr].roster.removeItem(toUnq)
+                else:
+                    return
 
         self.routeStanza(el,fro,to)
 
@@ -232,7 +236,7 @@ class j2jComponent(component.Service):
             presence.attributes['type']='unavailable'
             presence.addElement('status',content="Logging in...")
             self.send(presence)
-            self.clients[fro.full()]=Client(el,self.reactor,self,fro,clientJid,data[3],data[1],data[4])
+            self.clients[fro.full()]=Client(el,self.reactor,self,fro,clientJid,data[3],data[1],data[4],data[5],data[6])
         elif self.clients.has_key(fro.full()) and presenceType=="unavailable":
             if self.clients[fro.full()].connected:
                 self.debug.loginsLog("User %s is trying to log out" % (fro.full()))
@@ -407,7 +411,7 @@ class j2jComponent(component.Service):
             query.addElement("registered")
         else:
             edit=False
-            data=[None,None,None,None,5222]
+            data=[None,None,None,None,5222,False,False]
         form=utils.createForm(query,"form")
         utils.addTitle(form,"J2J Registration Form")
         if not edit:
@@ -419,6 +423,9 @@ class j2jComponent(component.Service):
         utils.addTextBox(form,"server","Server",data[2],required=True)
         utils.addTextBox(form,"domain","Domain or IP",data[3])
         utils.addTextBox(form,"port","Port",str(data[4]))
+        if not uid:
+            utils.addCheckBox(form,"import_roster","Import roster",data[5])
+        utils.addCheckBox(form,"remove_from_roster","Remove contacts from guest roster automatically",data[6])
         self.send(iq)
 
     def setRegister(self,el,fro,ID):
@@ -478,6 +485,16 @@ class j2jComponent(component.Service):
         if server=='':
             self.sendIqError(to=fro.full(), fro=self.config.JID, ID=ID, etype="modify", condition="not-acceptable")
             return
+        import_roster=xpath.XPathQuery(formXPath+"/field[@var='import_roster']/value").queryForString(el)
+        if import_roster:
+            import_roster=utils.strToBool(import_roster)
+        else:
+            import_roster=False
+        remove_from_roster=xpath.XPathQuery(formXPath+"/field[@var='remove_from_roster']/value").queryForString(el)
+        if remove_from_roster:
+            remove_from_roster=utils.strToBool(remove_from_roster)
+        else:
+            remove_from_roster=False
         try:
             hjid=jid.JID(username+"@"+server)
         except:
@@ -489,8 +506,16 @@ class j2jComponent(component.Service):
             port=int(port)
         except:
             port=5222
+        if remove_from_roster:
+            remove_from_roster='True'
+        else:
+            remove_from_roster='False'
+        if import_roster:
+            import_roster='True'
+        else:
+            import_roster='False'
         if not edit:
-            self.db.execute("INSERT INTO "+self.db.dbTablePrefix+"users (jid,username,domain,server,password,port) VALUES ( '"+self.db.dbQuote(fro.userhost().encode('utf-8'))+"', '"+self.db.dbQuote(username.encode('utf-8'))+"', '"+self.db.dbQuote(domain.encode('utf-8'))+"', '"+self.db.dbQuote(server.encode('utf-8'))+"', '"+self.db.dbQuote(password.encode('utf-8'))+"', "+str(port)+")")
+            self.db.execute("INSERT INTO %susers (jid,username,domain,server,password,port,import_roster,remove_from_guest_roster) VALUES ('%s','%s','%s','%s','%s',%s,'%s','%s')" % (self.db.dbTablePrefix,self.db.dbQuote(fro.userhost().encode('utf-8')),self.db.dbQuote(username.encode('utf-8')),self.db.dbQuote(domain.encode('utf-8')),self.db.dbQuote(server.encode('utf-8')),self.db.dbQuote(password.encode('utf-8')),str(port),str(import_roster),str(remove_from_roster)))
             uid=self.db.getIdByJid(fro.userhost())
             self.db.execute("INSERT INTO "+self.db.dbTablePrefix+"users_options ( id ) VALUES  ('"+str(uid)+"')")
             self.db.commit()
@@ -522,7 +547,7 @@ class j2jComponent(component.Service):
                     pres.attributes["type"]="unsubscribed"
                     self.send(pres)
                 self.db.execute("DELETE FROM %s WHERE id='%s'" % (self.db.dbTablePrefix+"rosters",str(uid)))
-            self.db.execute("UPDATE %s SET username='%s', domain='%s', server='%s', password='%s', port=%s WHERE id='%s'" % (self.db.dbTablePrefix+"users",self.db.dbQuote(username),self.db.dbQuote(domain),self.db.dbQuote(server),self.db.dbQuote(password),str(port),str(uid)))
+            self.db.execute("UPDATE %s SET username='%s', domain='%s', server='%s', password='%s', port=%s, remove_from_guest_roster=%s WHERE id='%s'" % (self.db.dbTablePrefix+"users",self.db.dbQuote(username.encode('utf-8')),self.db.dbQuote(domain.encode('utf-8')),self.db.dbQuote(server.encode('utf-8')),self.db.dbQuote(password.encode('utf-8')),str(port),str(remove_from_roster),str(uid)))
             self.db.commit()
             self.sendIqResult(fro.full(),self.config.JID,ID,"jabber:iq:register")
             self.debug.registrationsLog("User %s has changed registration information to %s" % (fro.full(),username+"@"+server))
