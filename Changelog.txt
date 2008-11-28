@@ -1,4 +1,8 @@
 J2J Component (http://wiki.jrudevels.org/J2J) Changelog:
+1.2.10:
+	[add] Roster import by sending subscribe-presence and settings for it in
+	jabber:iq:register form
+
 
 1.1.9:
     [fix] Autoanswer fix: no answer to groupchat and headline messages
