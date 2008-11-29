@@ -11,7 +11,9 @@
 import j2j
 from twisted.words.protocols.jabber import component
 from twisted.internet import reactor
+from twisted.scripts import _twistd_unix as twistd
 import getopt
+import os
 import sys
 from config import Config
 
@@ -64,13 +66,24 @@ def main():
                           "Jabber-To-Jabber component version:"+version)
     parser.add_option('-c','--config', metavar='FILE', dest='configFile',
                       help="Read config from custom file")
+    parser.add_option('-b','--background', dest='configBackground',
+                      help="Daemonize/background transport",
+                      action="store_true")
     (options,args) = parser.parse_args()
     configFile = options.configFile
+    configBackground = options.configBackground
 
     if configFile:
         config=Config(configFile)
     else:
         config=Config()
+    if configBackground and os.name == "posix": # daemons supported?
+        twistd.daemonize() # send to background
+    if config.PROCESS_PID:
+        pid = str(os.getpid())
+        pidfile = open(config.PROCESS_PID, "w")
+        pidfile.write("%s\n" % pid)
+        pidfile.close()
 
     c=j2j.j2jComponent(reactor,version,config)
     f=component.componentFactory(config.JID,config.PASSWORD)

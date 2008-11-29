@@ -15,6 +15,8 @@ class Config:
         self.HOST=unicode(config.get("component","Host"),"utf-8")
         self.PORT=unicode(config.get("component","Port"),"utf-8")
         self.PASSWORD=unicode(config.get("component","Password"),"utf-8")
+        
+        self.PROCESS_PID=unicode(config.get("process","Pid"),"utf-8")
 
         self.DB_HOST=unicode(config.get("database","Host"),"utf-8")
         if self.DB_HOST=="":

@@ -4,6 +4,9 @@ Host=localhost
 Port=8883
 Password=secret
 
+[process]
+Pid=/var/run/j2jt/j2jt.pid ; pid file
+
 [database]
 Host=localhost
 Type=postgres ;or mysql
