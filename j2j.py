@@ -506,16 +506,8 @@ class j2jComponent(component.Service):
             port=int(port)
         except:
             port=5222
-        if remove_from_roster:
-            remove_from_roster='True'
-        else:
-            remove_from_roster='False'
-        if import_roster:
-            import_roster='True'
-        else:
-            import_roster='False'
         if not edit:
-            self.db.execute("INSERT INTO %susers (jid,username,domain,server,password,port,import_roster,remove_from_guest_roster) VALUES ('%s','%s','%s','%s','%s',%s,'%s','%s')" % (self.db.dbTablePrefix,self.db.dbQuote(fro.userhost().encode('utf-8')),self.db.dbQuote(username.encode('utf-8')),self.db.dbQuote(domain.encode('utf-8')),self.db.dbQuote(server.encode('utf-8')),self.db.dbQuote(password.encode('utf-8')),str(port),str(import_roster),str(remove_from_roster)))
+            self.db.execute("INSERT INTO %susers (jid,username,domain,server,password,port,import_roster,remove_from_guest_roster) VALUES ('%s','%s','%s','%s','%s',%s,'%s','%s')" % (self.db.dbTablePrefix,self.db.dbQuote(fro.userhost().encode('utf-8')),self.db.dbQuote(username.encode('utf-8')),self.db.dbQuote(domain.encode('utf-8')),self.db.dbQuote(server.encode('utf-8')),self.db.dbQuote(password.encode('utf-8')),str(port),str(int(import_roster)),str(int(remove_from_roster))))
             uid=self.db.getIdByJid(fro.userhost())
             self.db.execute("INSERT INTO "+self.db.dbTablePrefix+"users_options ( id ) VALUES  ('"+str(uid)+"')")
             self.db.commit()
@@ -547,7 +539,7 @@ class j2jComponent(component.Service):
                     pres.attributes["type"]="unsubscribed"
                     self.send(pres)
                 self.db.execute("DELETE FROM %s WHERE id='%s'" % (self.db.dbTablePrefix+"rosters",str(uid)))
-            self.db.execute("UPDATE %s SET username='%s', domain='%s', server='%s', password='%s', port=%s, remove_from_guest_roster=%s WHERE id='%s'" % (self.db.dbTablePrefix+"users",self.db.dbQuote(username.encode('utf-8')),self.db.dbQuote(domain.encode('utf-8')),self.db.dbQuote(server.encode('utf-8')),self.db.dbQuote(password.encode('utf-8')),str(port),str(remove_from_roster),str(uid)))
+            self.db.execute("UPDATE %s SET username='%s', domain='%s', server='%s', password='%s', port=%s, remove_from_guest_roster='%s' WHERE id='%s'" % (self.db.dbTablePrefix+"users",self.db.dbQuote(username.encode('utf-8')),self.db.dbQuote(domain.encode('utf-8')),self.db.dbQuote(server.encode('utf-8')),self.db.dbQuote(password.encode('utf-8')),str(port),str(int(remove_from_roster)),str(uid)))
             self.db.commit()
             self.sendIqResult(fro.full(),self.config.JID,ID,"jabber:iq:register")
             self.debug.registrationsLog("User %s has changed registration information to %s" % (fro.full(),username+"@"+server))
