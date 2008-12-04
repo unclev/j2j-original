@@ -94,14 +94,13 @@ class roster:
                     self.host.component.send(presence)
                     db.execute("DELETE FROM %s WHERE id='%s' and jid='%s'" % (db.dbTablePrefix+"rosters", str(uid), db.dbQuote(jid.encode("utf-8"))))
             for jid in self.items.keys():
-                if not jid in dbroster:
+                if not (jid,) in dbroster:
                     presence=Element((None,'presence'))
                     presence.attributes['to']=self.host.host_jid.userhost()
                     presence.attributes['type']='subscribe'
                     presence.attributes['from']=utils.quoteJID(jid,self.host.config.JID)
                     if self.items[jid][0]:
                         nickEl=presence.addElement('nick','http://jabber.org/protocol/nick',content=self.items[jid][0])
-                        #nickEl.attributes['xmlns']=''
                     self.host.component.send(presence)
                     db.execute("INSERT INTO %s (id,jid) VALUES ('%s','%s')" % (db.dbTablePrefix+"rosters", str(uid), db.dbQuote(jid.encode("utf-8"))))
             db.commit()
