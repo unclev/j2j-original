@@ -16,7 +16,7 @@ CREATE TABLE j2j_users (
     "password" text,
     port integer,
     import_roster boolean DEFAULT false,
-    remove_from_guest_roster boolean DEFAULT false,
+    remove_from_guest_roster boolean DEFAULT false
 );
 
 ALTER TABLE ONLY j2j_users
