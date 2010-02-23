@@ -517,14 +517,14 @@ class j2jComponent(component.Service):
             pres.attributes["from"]=self.config.JID
             pres.attributes["type"]="subscribe"
             self.send(pres)
-            if self.config.ADMINS!=[]:
+            if self.config.ADMINS!=[] and self.config.REGISTRATION_NOTIFY:
                 msg=Element((None,"message"))
                 msg.attributes["type"]="chat"
                 msg.attributes["from"]=self.config.JID
                 msg.addElement("body",content="J2J %s Registration notify:\nHost JID:%s\nGuest JID:%s" % (self.config.JID,fro.full(),username+"@"+server))
-            for ajid in self.config.ADMINS:
-                msg.attributes["to"]=ajid
-                self.send(msg)
+                for ajid in self.config.ADMINS:
+                    msg.attributes["to"]=ajid
+                    self.send(msg)
             self.debug.registrationsLog("User %s is registered to guest-jid %s" % (fro.full(), username+"@"+server))
         elif edit:
             data=self.db.getDataById(uid)

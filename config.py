@@ -37,3 +37,4 @@ class Config:
 
         admins=unicode(config.get("admins","List"),"utf-8")
         self.ADMINS=admins.split(",")
+        self.REGISTRATION_NOTIFY = config.getboolean("admins", "Registrations_notify")
