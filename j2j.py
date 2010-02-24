@@ -79,7 +79,7 @@ class j2jComponent(component.Service):
         else:
             self.routeStanza(el,fro,to)
             return
-        self.sendMessageError(to=fro.full(),fro=to.full(),etype="cancel",condition="service-unavailable")
+        self.sendError(el, etype="cancel", condition="service-unavailable")
 
     def routeStanza(self, el, fro, to):
         froStr=fro.full()
@@ -734,4 +734,16 @@ class j2jComponent(component.Service):
         error.attributes["code"] = str(utils.errorCodeMap[condition])
         cond=error.addElement(condition)
         cond.attributes["xmlns"]="urn:ietf:params:xml:ns:xmpp-stanzas"
+        self.send(el)
+
+    def sendError(self, el, etype, condition):
+        fro = el.attributes['from']
+        el.attributes['from'] = el.attributes['to']
+        el.attributes['to'] = fro
+        el.attributes['type'] = 'error'
+        error = el.addElement("error")
+        error.attributes['type'] = etype
+        error.attributes['code'] = str(utils.errorCodeMap[condition])
+        cond = error.addElement(condition)
+        cond.attributes["xmlns"] = "urn:ietf:params:xml:ns:xmpp-stanzas"
         self.send(el)
