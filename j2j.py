@@ -172,7 +172,7 @@ class j2jComponent(component.Service):
                 p.attributes["from"]=to.userhost()
                 p.attributes["type"]="unsubscribed"
                 self.send(p)
-                if self.clients[froStr].remove_from_roster and f:
+                if f and self.clients[froStr].remove_from_roster:
                     self.clients[froStr].roster.removeItem(toUnq)
                 else:
                     return
