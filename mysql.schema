@@ -1,3 +1,5 @@
+-- schema revision 1
+
 CREATE TABLE j2j_users (
     id bigint NOT NULL AUTO_INCREMENT,
     jid varchar(255),
