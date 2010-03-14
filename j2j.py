@@ -9,7 +9,7 @@ if __name__=='__main__':
     print "start main.py"
     sys.exit(0)
 
-import md5
+import hashlib
 import debug
 from client import Client
 from adhoc import adHoc
@@ -201,7 +201,7 @@ class j2jComponent(component.Service):
             newjid=jid.JID(data[0]+"@"+data[2]).userhost().encode('utf-8')
         except:
             return
-        newmd5=md5.md5(newjid).hexdigest()
+        newmd5=hashlib.md5(newjid).hexdigest()
         if not self.clients.has_key(fro.full()) and (presenceType=="available" or presenceType==None):
             self.debug.loginsLog("User %s is trying to log in" % (fro.full()))
             js=[]
@@ -219,13 +219,13 @@ class j2jComponent(component.Service):
                     for jidmd5 in element.elements():
                         if jidmd5.name=="jid":
                             js.append(unicode(jidmd5))
-                    element.addElement("jid",content=md5.md5(fro.userhost().encode("utf-8")).hexdigest()).attributes["gateway"]=self.config.JID
+                    element.addElement("jid",content=hashlib.md5(fro.userhost().encode("utf-8")).hexdigest()).attributes["gateway"]=self.config.JID
             if js==[]:
                 j2jh=el.addElement("x")
                 j2jh.attributes["xmlns"]="j2j:history"
                 j2jh.attributes["hops"]="1"
-                j2jh.addElement("jid",content=md5.md5(fro.userhost().encode("utf-8")).hexdigest()).attributes["gateway"]=self.config.JID
-            js.append(md5.md5(fro.userhost().encode("utf-8")).hexdigest())
+                j2jh.addElement("jid",content=hashlib.md5(fro.userhost().encode("utf-8")).hexdigest()).attributes["gateway"]=self.config.JID
+            js.append(hashlib.md5(fro.userhost().encode("utf-8")).hexdigest())
             if newmd5 in js:
                 self.sendPresenceError(fro.full(),self.config.JID,"cancel","conflict")
                 self.debug.loginsLog("User %s has confict login:\n%s" % (fro.full(),el.toXml()))
