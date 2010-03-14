@@ -3,6 +3,11 @@ J2J Component (http://wiki.jrudevels.org/J2J) Changelog:
 	[add] Roster import by sending subscribe-presence and settings for it in
 	jabber:iq:register form
 	[add] Command-line option -b for daemonize j2j
+
+	[chg] use hashlib instead of md5
+
+	[imp] db schema improvements
+
 	[fix] Add message body in error stanza
 
 1.1.9:

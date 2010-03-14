@@ -151,6 +151,6 @@ class adHoc:
             rT=rT[:-1]
             rT=rT[:1000]
             opts[0]=rT
-        self.component.db.execute("UPDATE %s SET onlyroster='%s', autoreplyenabled='%s', autoreplybutforward='%s', replytext='%s', lightnotify='%s' WHERE id='%s'" % (self.component.db.dbTablePrefix+"users_options",str(int(opts[3])),str(int(opts[4])),str(int(opts[2])),self.component.db.dbQuote(opts[0]),str(int(opts[1])),str(uid)))
+        self.component.db.execute("UPDATE %s SET onlyroster='%s', autoreplyenabled='%s', autoreplybutforward='%s', replytext='%s', lightnotify='%s' WHERE user_id='%s'" % (self.component.db.dbTablePrefix+"users_options",str(int(opts[3])),str(int(opts[4])),str(int(opts[2])),self.component.db.dbQuote(opts[0]),str(int(opts[1])),str(uid)))
         self.component.db.commit()
         self.component.send(iq)

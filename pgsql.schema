@@ -1,14 +1,5 @@
-CREATE TABLE j2j_rosters (
-    num serial NOT NULL,
-    id integer,
-    jid text
-);
-
-ALTER TABLE ONLY j2j_rosters
-    ADD CONSTRAINT j2j_rosters_num_key UNIQUE (num);
-
 CREATE TABLE j2j_users (
-    id serial NOT NULL,
+    id serial NOT NULL PRIMARY KEY,
     jid text,
     username text,
     "domain" text,
@@ -19,11 +10,16 @@ CREATE TABLE j2j_users (
     remove_from_guest_roster boolean DEFAULT false
 );
 
-ALTER TABLE ONLY j2j_users
-    ADD CONSTRAINT j2j_users_id_key UNIQUE (id);
+CREATE TABLE j2j_rosters (
+    user_id integer NOT NULL REFERENCES "j2j_users" ("id") DEFERRABLE INITIALLY DEFERRED,
+    jid text
+);
+
+CREATE INDEX j2j_roster_user_id_index ON "j2j_rosters"("user_id");
+CREATE INDEX j2j_roster_item_index ON "j2j_rosters"("user_id", "jid");
 
 CREATE TABLE j2j_users_options (
-    id integer,
+    user_id integer NOT NULL UNIQUE REFERENCES "j2j_users" ("id") DEFERRABLE INITIALLY DEFERRED,
     replytext text,
     lightnotify boolean DEFAULT false,
     autoreplybutforward boolean DEFAULT false,
@@ -31,5 +27,4 @@ CREATE TABLE j2j_users_options (
     autoreplyenabled boolean DEFAULT false
 );
 
-ALTER TABLE ONLY j2j_users_options
-    ADD CONSTRAINT j2j_users_options_id_key UNIQUE (id);
+CREATE INDEX j2j_users_options_user_id ON "j2j_users_options" ("user_id");

@@ -81,7 +81,7 @@ class roster:
         db=self.host.component.db
         uid=db.getIdByJid(self.host.host_jid.userhost())
         if uid and self.host.import_roster:
-            dbroster=db.fetchall("SELECT jid FROM %s WHERE id='%s'" % (db.dbTablePrefix+"rosters",str(uid)))
+            dbroster=db.fetchall("SELECT jid FROM %s WHERE user_id='%s'" % (db.dbTablePrefix+"rosters",str(uid)))
             presence=Element((None,'presence'))
             presence.attributes['to']=self.host.host_jid.userhost()
             for i in dbroster:
@@ -92,7 +92,7 @@ class roster:
                     self.host.component.send(presence)
                     presence.attributes['type']='unsubscribed'
                     self.host.component.send(presence)
-                    db.execute("DELETE FROM %s WHERE id='%s' and jid='%s'" % (db.dbTablePrefix+"rosters", str(uid), db.dbQuote(jid.encode("utf-8"))))
+                    db.execute("DELETE FROM %s WHERE user_id='%s' and jid='%s'" % (db.dbTablePrefix+"rosters", str(uid), db.dbQuote(jid.encode("utf-8"))))
             for jid in self.items.keys():
                 if not (jid,) in dbroster:
                     presence=Element((None,'presence'))
@@ -102,7 +102,7 @@ class roster:
                     if self.items[jid][0]:
                         nickEl=presence.addElement('nick','http://jabber.org/protocol/nick',content=self.items[jid][0])
                     self.host.component.send(presence)
-                    db.execute("INSERT INTO %s (id,jid) VALUES ('%s','%s')" % (db.dbTablePrefix+"rosters", str(uid), db.dbQuote(jid.encode("utf-8"))))
+                    db.execute("INSERT INTO %s (user_id,jid) VALUES ('%s','%s')" % (db.dbTablePrefix+"rosters", str(uid), db.dbQuote(jid.encode("utf-8"))))
             db.commit()
         if iqType=="set":
             result=Element((None,"iq"))

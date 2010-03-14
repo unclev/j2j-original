@@ -138,8 +138,8 @@ class j2jComponent(component.Service):
             toUnq=utils.unquoteJID(to.userhost(),self.config.JID)
             if not f:
                 return
-            if not self.db.getCount('rosters',"id='%s' AND jid='%s'" % (str(uid),toUnq.encode("utf-8"))):
-                self.db.execute("INSERT INTO %s (id,jid) VALUES ('%s','%s')" % (self.db.dbTablePrefix+"rosters", str(uid), self.db.dbQuote(toUnq.encode("utf-8"))))
+            if not self.db.getCount('rosters',"user_id='%s' AND jid='%s'" % (str(uid),toUnq.encode("utf-8"))):
+                self.db.execute("INSERT INTO %s (user_id,jid) VALUES ('%s','%s')" % (self.db.dbTablePrefix+"rosters", str(uid), self.db.dbQuote(toUnq.encode("utf-8"))))
                 self.db.commit()
             if self.clients[froStr].roster.items.has_key(toUnq):
                 subscription=self.clients[froStr].roster.items[toUnq][1]
@@ -164,8 +164,8 @@ class j2jComponent(component.Service):
 
         if presenceType=="unsubscribe" or presenceType=="unsubscribed":
             toUnq=utils.unquoteJID(to.full(),self.config.JID)
-            if self.db.getCount('rosters',"id='%s' AND jid='%s'" % (str(uid),toUnq.encode("utf-8"))):
-                self.db.execute("DELETE FROM %s WHERE id='%s' AND jid='%s'" % (self.db.dbTablePrefix+"rosters", str(uid), self.db.dbQuote(toUnq.encode('utf-8'))))
+            if self.db.getCount('rosters',"user_id='%s' AND jid='%s'" % (str(uid),toUnq.encode("utf-8"))):
+                self.db.execute("DELETE FROM %s WHERE user_id='%s' AND jid='%s'" % (self.db.dbTablePrefix+"rosters", str(uid), self.db.dbQuote(toUnq.encode('utf-8'))))
                 self.db.commit()
                 p = Element((None,'presence'))
                 p.attributes["to"]=fro.userhost()
@@ -449,15 +449,15 @@ class j2jComponent(component.Service):
                 for ojid in self.clients[fro.full()].presences_available_full:
                     unPres.attributes["from"]=utils.quoteJID(ojid,self.config.JID)
                     self.send(unPres)
-            ujids=self.db.fetchall("SELECT jid FROM %s WHERE id='%s'" % (self.db.dbTablePrefix+"rosters",str(uid)))
+            ujids=self.db.fetchall("SELECT jid FROM %s WHERE user_id='%s'" % (self.db.dbTablePrefix+"rosters",str(uid)))
             for ojid in ujids:
                 unPres.attributes["from"]=utils.quoteJID(ojid[0],self.config.JID)
                 unPres.attributes["type"]="unsubscribe"
                 self.send(unPres)
                 unPres.attributes["type"]="unsubscribed"
                 self.send(unPres)
-            self.db.execute("DELETE from "+self.db.dbTablePrefix+"rosters WHERE id="+str(uid))
-            self.db.execute("DELETE from "+self.db.dbTablePrefix+"users_options WHERE id="+str(uid))
+            self.db.execute("DELETE from "+self.db.dbTablePrefix+"rosters WHERE user_id="+str(uid))
+            self.db.execute("DELETE from "+self.db.dbTablePrefix+"users_options WHERE user_id="+str(uid))
             self.db.execute("DELETE from "+self.db.dbTablePrefix+"users WHERE id="+str(uid))
             self.db.commit()
             self.sendIqResult(fro.full(),self.config.JID,ID,"jabber:iq:register")
@@ -509,7 +509,7 @@ class j2jComponent(component.Service):
         if not edit:
             self.db.execute("INSERT INTO %susers (jid,username,domain,server,password,port,import_roster,remove_from_guest_roster) VALUES ('%s','%s','%s','%s','%s',%s,'%s','%s')" % (self.db.dbTablePrefix,self.db.dbQuote(fro.userhost().encode('utf-8')),self.db.dbQuote(username.encode('utf-8')),self.db.dbQuote(domain.encode('utf-8')),self.db.dbQuote(server.encode('utf-8')),self.db.dbQuote(password.encode('utf-8')),str(port),str(int(import_roster)),str(int(remove_from_roster))))
             uid=self.db.getIdByJid(fro.userhost())
-            self.db.execute("INSERT INTO "+self.db.dbTablePrefix+"users_options ( id ) VALUES  ('"+str(uid)+"')")
+            self.db.execute("INSERT INTO "+self.db.dbTablePrefix+"users_options ( user_id ) VALUES  ('"+str(uid)+"')")
             self.db.commit()
             self.sendIqResult(fro.full(),self.config.JID,ID,"jabber:iq:register")
             pres=Element((None,"presence"))
@@ -529,7 +529,7 @@ class j2jComponent(component.Service):
         elif edit:
             data=self.db.getDataById(uid)
             if data[0]!=username or data[2]!=server:
-                a=self.db.fetchall("SELECT jid FROM %s WHERE id='%s'" % (self.db.dbTablePrefix+"rosters",str(uid)))
+                a=self.db.fetchall("SELECT jid FROM %s WHERE user_id='%s'" % (self.db.dbTablePrefix+"rosters",str(uid)))
                 for unjid in a:
                     pres=Element((None,"presence"))
                     pres.attributes["to"]=fro.userhost()
@@ -538,7 +538,7 @@ class j2jComponent(component.Service):
                     self.send(pres)
                     pres.attributes["type"]="unsubscribed"
                     self.send(pres)
-                self.db.execute("DELETE FROM %s WHERE id='%s'" % (self.db.dbTablePrefix+"rosters",str(uid)))
+                self.db.execute("DELETE FROM %s WHERE user_id='%s'" % (self.db.dbTablePrefix+"rosters",str(uid)))
             self.db.execute("UPDATE %s SET username='%s', domain='%s', server='%s', password='%s', port=%s, remove_from_guest_roster='%s' WHERE id='%s'" % (self.db.dbTablePrefix+"users",self.db.dbQuote(username.encode('utf-8')),self.db.dbQuote(domain.encode('utf-8')),self.db.dbQuote(server.encode('utf-8')),self.db.dbQuote(password.encode('utf-8')),str(port),str(int(remove_from_roster)),str(uid)))
             self.db.commit()
             self.sendIqResult(fro.full(),self.config.JID,ID,"jabber:iq:register")

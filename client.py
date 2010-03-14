@@ -227,7 +227,7 @@ class Client(object):
                 unPres.attributes["from"]=utils.quoteJID(ojid,self.config.JID)
                 self.component.send(unPres)
             for ojid in self.presences.keys():
-                if self.component.db.getCount('rosters',"id='%s' AND jid='%s'" % (str(uid),ojid.split("/")[0].encode('utf-8'))):
+                if self.component.db.getCount('rosters',"user_id='%s' AND jid='%s'" % (str(uid),ojid.split("/")[0].encode('utf-8'))):
                     unPres.attributes["from"]=utils.quoteJID(ojid,self.config.JID)
                     self.component.send(unPres)
         self.component.deleteClient(self.host_jid)
@@ -276,7 +276,7 @@ class Client(object):
             return
         uid=self.component.db.getIdByJid(self.host_jid.userhost())
         if not uid: return
-        isInRoster=self.component.db.getCount("rosters","id='%s' AND jid='%s'" % (str(uid),self.component.db.dbQuote(fro.userhost().encode('utf-8'))))
+        isInRoster=self.component.db.getCount("rosters","user_id='%s' AND jid='%s'" % (str(uid),self.component.db.dbQuote(fro.userhost().encode('utf-8'))))
         if presType=="available" or presType==None:
             self.presences[fro.full()]=el
             if isInRoster==0 and (not fro.userhost() in self.presences_available):
