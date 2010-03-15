@@ -1,8 +1,8 @@
--- schema revision 1
+-- schema revision 2
 
 CREATE TABLE j2j_users (
     id serial NOT NULL PRIMARY KEY,
-    jid text,
+    jid text UNIQUE,
     username text,
     "domain" text,
     server text,
