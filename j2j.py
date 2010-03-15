@@ -69,9 +69,6 @@ class j2jComponent(component.Service):
         except:
             return
         if to.full()==self.config.JID: return
-        uid=self.db.getIdByJid(fro.userhost())
-        if not uid:
-            self.sendMessageError(to=fro.full(),fro=to.full(),etype="auth",condition="registration-required")
         if not self.clients.has_key(fro.full()):
             pass
         elif not self.clients[fro.full()].authenticated:
@@ -81,24 +78,27 @@ class j2jComponent(component.Service):
             return
         self.sendError(el, etype="cancel", condition="service-unavailable")
 
+    def getClient(self, jid):
+        r = None
+        jidStr = jid.full()
+        if jidStr == jid.userhost():
+            for cl in self.clients:
+                if cl.startswith(jidStr + '/'):
+                    r = self.clients[cl]
+        else:
+            r = self.clients.get(jidStr, None)
+        return r
+
     def routeStanza(self, el, fro, to):
-        froStr=fro.full()
-        if fro.full()==fro.userhost():
-            f=False
-            for cl in self.clients.keys():
-                if cl.find(froStr+"/")==0:
-                    f=True
-                    froStr=cl
-            if not f:
-                return
-        elif not self.clients.has_key(fro.full()):
+        cl = self.getClient(fro)
+        if not cl:
             return
 
         el.attributes['to'] = utils.unquoteJID(to.full(),self.config.JID)
         del el.attributes['from']
         utils.delUri(el)
 
-        self.clients[froStr].send(el)
+        cl.send(el)
 
     def onPresence(self, el):
         fro = el.getAttribute("from")
@@ -110,39 +110,29 @@ class j2jComponent(component.Service):
         except:
             return
 
-        uid=self.db.getIdByJid(fro.userhost())
-        if not uid:
-            self.sendPresenceError(to=fro.full(),fro=to.full(),etype="auth",condition="registration-required")
-            return
-
         if to.full()==self.config.JID:
             self.componentPresence(el,fro,presenceType)
             return
 
-        if presenceType=="available" or presenceType==None:
-            froStr=fro.full()
-            if not self.clients.has_key(fro.full()): return
-            if not utils.unquoteJID(to.userhost(),self.config.JID) in self.clients[froStr].presences_available:
-                self.clients[froStr].presences_available.append(utils.unquoteJID(to.userhost(),self.config.JID))
-            if not utils.unquoteJID(to.full(),self.config.JID) in self.clients[froStr].presences_available_full:
-                self.clients[froStr].presences_available_full.append(utils.unquoteJID(to.full(),self.config.JID))
+        cl = self.getClient(fro)
+        if not cl:
+            return
+        uid = cl.uid
 
-        froStr=fro.userhost()
-        if presenceType in ('subscribe','unsubscribe','unsubscribed'):
-            f=False
-            for cl in self.clients.keys():
-                if cl.find(froStr+"/")==0:
-                    f=True
-                    froStr=cl
+        if presenceType=="available" or presenceType==None:
+            if not self.clients.has_key(fro.full()): return
+            if not utils.unquoteJID(to.userhost(),self.config.JID) in cl.presences_available:
+                cl.presences_available.append(utils.unquoteJID(to.userhost(),self.config.JID))
+            if not utils.unquoteJID(to.full(),self.config.JID) in cl.presences_available_full:
+                cl.presences_available_full.append(utils.unquoteJID(to.full(),self.config.JID))
+
         if presenceType=="subscribe":
             toUnq=utils.unquoteJID(to.userhost(),self.config.JID)
-            if not f:
-                return
             if not self.db.getCount('rosters',"user_id='%s' AND jid='%s'" % (str(uid),toUnq.encode("utf-8"))):
                 self.db.execute("INSERT INTO %s (user_id,jid) VALUES ('%s','%s')" % (self.db.dbTablePrefix+"rosters", str(uid), self.db.dbQuote(toUnq.encode("utf-8"))))
                 self.db.commit()
-            if self.clients[froStr].roster.items.has_key(toUnq):
-                subscription=self.clients[froStr].roster.items[toUnq][1]
+            if cl.roster.items.has_key(toUnq):
+                subscription=cl.roster.items[toUnq][1]
                 if subscription in ["both","to"]:
                     p = Element((None,"presence"))
                     p.attributes["to"]=fro.userhost()
@@ -153,9 +143,9 @@ class j2jComponent(component.Service):
                         p.attributes["type"]="subscribe"
                         self.send(p)
 
-                    for pr in self.clients[cl].presences.keys():
+                    for pr in cl.presences.keys():
                         if pr.split('/')[0]==toUnq:
-                            pres=self.clients[froStr].presences[pr]
+                            pres=cl.presences[pr]
                             pres.attributes["from"]=utils.quoteJID(pr,self.config.JID)
                             pres.attributes["to"]=fro.full()
                             utils.delUri(pres)
@@ -172,8 +162,8 @@ class j2jComponent(component.Service):
                 p.attributes["from"]=to.userhost()
                 p.attributes["type"]="unsubscribed"
                 self.send(p)
-                if f and self.clients[froStr].remove_from_roster:
-                    self.clients[froStr].roster.removeItem(toUnq)
+                if f and cl.remove_from_roster:
+                    cl.roster.removeItem(toUnq)
                 else:
                     return
 
@@ -236,7 +226,7 @@ class j2jComponent(component.Service):
             presence.attributes['type']='unavailable'
             presence.addElement('status',content="Logging in...")
             self.send(presence)
-            self.clients[fro.full()]=Client(el,self.reactor,self,fro,clientJid,data[3],data[1],data[4],data[5],data[6])
+            self.clients[fro.full()]=Client(uid,el,self.reactor,self,fro,clientJid,data[3],data[1],data[4],data[5],data[6])
         elif self.clients.has_key(fro.full()) and presenceType=="unavailable":
             if self.clients[fro.full()].connected:
                 self.debug.loginsLog("User %s is trying to log out" % (fro.full()))
@@ -272,10 +262,6 @@ class j2jComponent(component.Service):
             return
         if to.full()==self.config.JID:
             self.componentIq(el,fro,ID,iqType)
-            return
-        uid=self.db.getIdByJid(fro.userhost())
-        if not uid:
-            self.sendIqError(to=fro.full(),fro=to.full(),etype="auth", ID=ID,condition="registration-required")
             return
         if not self.clients.has_key(fro.full()):
             pass
