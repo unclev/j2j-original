@@ -52,6 +52,14 @@ class j2jComponent(component.Service):
         self.xmlstream.addObserver("/iq", self.onIq)
         self.xmlstream.addObserver("/presence", self.onPresence)
         self.xmlstream.addObserver("/message", self.onMessage)
+
+        jids = self.db.fetchall('SELECT jid FROM %susers' % self.db.dbTablePrefix)
+        probe = Element((None, 'presence'))
+        probe.attributes['type'] = 'probe'
+        probe.attributes['from'] = self.config.JID
+        for jid, in jids:
+            probe.attributes['to'] = jid
+            self.send(probe)
         print "Connected"
 
     def rawIn(self,data):
