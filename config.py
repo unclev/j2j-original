@@ -3,18 +3,24 @@
 
 __id__ = "$Id$"
 
+from ConfigParser import NoOptionError
+
+import ConfigParser
 import os
 
 class Config:
 
     def __init__(self, configname=["j2j.conf",os.path.expanduser("~/.j2j/j2j.conf"),"/etc/j2j/j2j.conf"]):
-        import ConfigParser
         config=ConfigParser.ConfigParser()
         config.read(configname)
         self.JID=unicode(config.get("component","JID"),"utf-8")
         self.HOST=unicode(config.get("component","Host"),"utf-8")
         self.PORT=unicode(config.get("component","Port"),"utf-8")
         self.PASSWORD=unicode(config.get("component","Password"),"utf-8")
+        try:
+            self.SEND_PROBES = config.getboolean("component", "Send_probes")
+        except NoOptionError:
+            self.SEND_PROBES = True
         
         self.PROCESS_PID=unicode(config.get("process","Pid"),"utf-8")
 

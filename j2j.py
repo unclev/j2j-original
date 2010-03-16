@@ -58,9 +58,10 @@ class j2jComponent(component.Service):
         probe = Element((None, 'presence'))
         probe.attributes['type'] = 'probe'
         probe.attributes['from'] = self.config.JID
-        for jid, in jids:
-            probe.attributes['to'] = jid
-            self.send(probe)
+        if self.config.SEND_PROBES:
+            for jid, in jids:
+                probe.attributes['to'] = jid
+                self.send(probe)
         print "Connected"
 
     def rawIn(self,data):

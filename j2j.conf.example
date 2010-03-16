@@ -3,6 +3,7 @@ JID=j2j.localhost
 Host=localhost
 Port=8883
 Password=secret
+Send_probes=True
 
 [process]
 Pid=/var/run/j2jt/j2jt.pid ; pid file
