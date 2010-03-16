@@ -12,6 +12,7 @@ import j2j
 from twisted.words.protocols.jabber import component
 from twisted.internet import reactor
 from twisted.scripts import _twistd_unix as twistd
+from ossignal import install_shutdown_handlers
 import getopt
 import os
 import sys
@@ -91,7 +92,8 @@ def main():
                                      "tcp:%s:%s" % (config.HOST, config.PORT))
     c.setServiceParent(connector)
     connector.startService()
-    reactor.run()
+    install_shutdown_handlers(c.shuttingDown)
+    reactor.run(installSignalHandlers=False)
 
 if __name__ == "__main__":
     main()

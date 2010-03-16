@@ -18,7 +18,7 @@ import os
 import codecs #!
 import utils
 import database
-from twisted.internet import reactor
+from twisted.internet.defer import Deferred
 from twisted.words.xish import domish,xpath
 from twisted.words.xish.domish import Element
 from twisted.words.protocols.jabber import xmlstream, client, jid, component
@@ -36,6 +36,7 @@ class j2jComponent(component.Service):
         self.VERSION=version
 
     def componentConnected(self, xs):
+        self.shuttingDown = False
         self.startTime = time.time()
         try:
             for client in self.clients.keys():
@@ -119,7 +120,10 @@ class j2jComponent(component.Service):
             return
 
         if to.full()==self.config.JID:
-            self.componentPresence(el,fro,presenceType)
+            if not self.shuttingDown:
+                self.componentPresence(el,fro,presenceType)
+            else:
+                self.sendError(el, etype="cancel", condition="service-unavailable")
             return
 
         cl = self.getClient(fro)
@@ -741,3 +745,19 @@ class j2jComponent(component.Service):
         cond = error.addElement(condition)
         cond.attributes["xmlns"] = "urn:ietf:params:xml:ns:xmpp-stanzas"
         self.send(el)
+
+    def shuttingDown(self, signum, _):
+        if self.shuttingDown:
+            self.reactor.stop()
+            return
+        self.shuttingDown = True
+        presence = Element((None, 'presence'))
+        presence.attributes['type'] = 'unavailable'
+        presence.attributes['to'] = self.config.JID
+        for cl in self.clients.values():
+            presence.attributes['from'] = cl.host_jid.full()
+            self.componentPresence(presence, cl.host_jid, 'unavailable')
+
+        def x(ignored=False):
+            self.reactor.stop()
+        self.reactor.callLater(3, x, None)
