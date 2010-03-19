@@ -8,39 +8,65 @@ from ConfigParser import NoOptionError
 import ConfigParser
 import os
 
+def config_decorator(func):
+    def wrapper(section, option, default=None, required=False):
+        try:
+            v = func(section, option)
+        except NoOptionError:
+            if required:
+                raise
+            v = default
+        if isinstance(v, str):
+            v = v.decode('utf-8')
+        return v
+    return wrapper
+
+
 class Config:
 
-    def __init__(self, configname=["j2j.conf",os.path.expanduser("~/.j2j/j2j.conf"),"/etc/j2j/j2j.conf"]):
-        config=ConfigParser.ConfigParser()
+    def __init__(self, configname=["j2j.conf",
+                                   os.path.expanduser("~/.j2j/j2j.conf"),
+                                   "/etc/j2j/j2j.conf"]):
+        config = ConfigParser.ConfigParser()
         config.read(configname)
-        self.JID=unicode(config.get("component","JID"),"utf-8")
-        self.HOST=unicode(config.get("component","Host"),"utf-8")
-        self.PORT=unicode(config.get("component","Port"),"utf-8")
-        self.PASSWORD=unicode(config.get("component","Password"),"utf-8")
-        try:
-            self.SEND_PROBES = config.getboolean("component", "Send_probes")
-        except NoOptionError:
-            self.SEND_PROBES = True
+
+        get = config_decorator(config.get)
+        getboolean = config_decorator(config.getboolean)
+
+        self.JID = get("component", "JID", required=True)
+        self.HOST = get("component", "Host", required=True)
+        self.PORT = get("component", "Port", required=True)
+        self.PASSWORD = get("component", "Password", required=True)
+        self.SEND_PROBES = getboolean("component", "Send_probes", default=True)
         
-        self.PROCESS_PID=unicode(config.get("process","Pid"),"utf-8")
+        self.PROCESS_PID = get("process", "Pid")
 
-        self.DB_HOST=unicode(config.get("database","Host"),"utf-8")
-        if self.DB_HOST=="":
-            self.DB_HOST=None
-        self.DB_TYPE=unicode(config.get("database","Type"),"utf-8")
-        self.DB_USER=unicode(config.get("database","User"),"utf-8")
-        self.DB_NAME=unicode(config.get("database","Name"),"utf-8")
-        self.DB_PASS=unicode(config.get("database","Password"),"utf-8")
-        self.DB_PREFIX=unicode(config.get("database","Prefix"),"utf-8")
+        self.DB_HOST = get("database", "Host")
+        if self.DB_HOST == "":
+            self.DB_HOST = None
+        self.DB_TYPE = get("database", "Type", required=True)
+        self.DB_USER = get("database", "User", required=True)
+        self.DB_NAME = get("database", "Name", required=True)
+        self.DB_PASS = get("database", "Password", required=True)
+        self.DB_PREFIX = get("database", "Prefix", default='j2j_')
 
-        self.LOGFILE=config.get("debug","logfile")
-        self.DEBUG_REGISTRATIONS=config.getboolean("debug","registrations")
-        self.DEBUG_LOGINS=config.getboolean("debug","logins")
-        self.DEBUG_XMLLOG=config.get("debug","xml_logging")
-        self.DEBUG_COMPXML=config.getboolean("debug","component_xml")
-        self.DEBUG_CLXML=config.getboolean("debug","clients_xml")
-        self.DEBUG_CLXMLACL=config.get("debug","clients_jids_to_log")
+        self.DEBUG_REGISTRATIONS = getboolean("debug", "registrations",
+                                              default=False)
+        self.DEBUG_LOGINS = getboolean("debug", "logins", default=False)
+        self.LOGFILE = None
+        if self.DEBUG_REGISTRATIONS or self.DEBUG_LOGINS:
+            self.LOGFILE = get("debug", "logfile", required=True)
 
-        admins=unicode(config.get("admins","List"),"utf-8")
-        self.ADMINS=admins.split(",")
-        self.REGISTRATION_NOTIFY = config.getboolean("admins", "Registrations_notify")
+        self.DEBUG_COMPXML = getboolean("debug", "component_xml",
+                                        default=False)
+        self.DEBUG_CLXML = getboolean("debug", "clients_xml", default=False)
+        self.DEBUG_CLXMLACL = get("debug", "clients_jids_to_log", default='')
+        self.DEBUG_XMLLOG = None
+        if self.DEBUG_COMPXML or self.DEBUG_CLXML:
+            self.DEBUG_XMLLOG = get("debug", "xml_logging", required=True)
+
+        admins = get("admins", "List", default="")
+        self.ADMINS = admins.split(",")
+        self.REGISTRATION_NOTIFY = getboolean("admins",
+                                              "Registrations_notify",
+                                              default=True)

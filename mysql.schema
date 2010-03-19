@@ -15,7 +15,7 @@ CREATE TABLE j2j_users (
 
 CREATE TABLE j2j_rosters (
     user_id integer,
-    jid varchar(255),
+    jid varchar(255)
 );
 
 CREATE TABLE j2j_users_options (
