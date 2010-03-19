@@ -3,7 +3,7 @@
 
 __id__ = "$Id$"
 
-from ConfigParser import NoOptionError
+from ConfigParser import NoOptionError, NoSectionError
 
 import ConfigParser
 import os
@@ -12,7 +12,7 @@ def config_decorator(func):
     def wrapper(section, option, default=None, required=False):
         try:
             v = func(section, option)
-        except NoOptionError:
+        except (NoOptionError, NoSectionError):
             if required:
                 raise
             v = default
