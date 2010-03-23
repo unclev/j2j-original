@@ -90,7 +90,7 @@ class J2JComponent(component.Service):
         else:
             self.routeStanza(el,fro,to)
             return
-        self.sendError(el, type="cancel", condition="service-unavailable")
+        self.sendError(el, "cancel", "service-unavailable")
 
     def getClient(self, jid):
         r = None
@@ -192,7 +192,7 @@ class J2JComponent(component.Service):
                 p.attributes["from"] = to.userhost()
                 p.attributes["type"] = "unsubscribed"
                 self.send(p)
-                if f and cl.remove_from_roster:
+                if cl.remove_from_roster:
                     cl.roster.removeItem(toUnq)
                 else:
                     return
