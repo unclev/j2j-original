@@ -85,10 +85,10 @@ class Roster:
         if uid and self.host.import_roster:
             dbroster = db.fetchall("SELECT jid FROM %s WHERE user_id='%s'" % \
                                    (db.dbTablePrefix + "rosters", str(uid)))
+            dbroster = [jid.decode('utf-8') for jid, in dbroster]
             presence = Element((None, 'presence'))
             presence.attributes['to'] = self.host.host_jid.userhost()
-            for i in dbroster:
-                jid, = i
+            for jid in dbroster:
                 if not jid in self.items:
                     presence.attributes['from'] = self.host.component.quoteJID(
                                                                            jid)
@@ -101,7 +101,7 @@ class Roster:
                                             str(uid),
                                             db.dbQuote(jid.encode("utf-8"))))
             for jid in self.items:
-                if not (jid,) in dbroster:
+                if not jid in dbroster:
                     presence = Element((None, 'presence'))
                     presence.attributes['to'] = self.host.host_jid.userhost()
                     presence.attributes['type'] = 'subscribe'
