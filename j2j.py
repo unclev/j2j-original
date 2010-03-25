@@ -12,6 +12,7 @@ import hashlib
 import time
 import os
 import utils
+import codecs #!
 
 from twisted.internet.defer import Deferred
 from twisted.words.xish import domish,xpath
@@ -23,6 +24,10 @@ import database
 import debug
 from client import Client
 from adhoc import AdHoc
+
+reload(sys)
+sys.setdefaultencoding("utf-8")
+sys.stdout = codecs.lookup('utf-8')[-1](sys.stdout)
 
 class J2JComponent(component.Service):
     def __init__(self, reactor, version, config, cJid):
