@@ -279,14 +279,15 @@ class J2JComponent(component.Service):
                                               data[4],
                                               data[5],
                                               data[6])
-        elif fro.full in self.clients and presenceType == "unavailable":
+        elif fro.full() in self.clients and presenceType == "unavailable":
             if self.clients[fro.full()].connected:
                 self.debug.loginsLog("User %s is trying to log out" % \
                                       (fro.full()))
                 self.clients[fro.full()].xmlstream.sendFooter()
+                #del self.clients[fro.full()]
             else:
-                self.disconnect = True
-        elif fro.full in self.clients and \
+                self.clients[fro.full()].disconnect = True
+        elif fro.full() in self.clients and \
              (presenceType == "available" or presenceType == None):
             if self.clients[fro.full()].connected:
                 del el.attributes["to"]
