@@ -6,7 +6,7 @@ import utils
 import urllib2
 from urllib import urlencode
 
-from twisted.names.error import DNSNameError
+from twisted.names.error import DNSNameError, DNSServerError
 from twisted.internet.error import DNSLookupError, TimeoutError, ConnectionDone
 from twisted.names.srvconnect import SRVConnector
 from twisted.words.xish import domish, xpath
@@ -162,14 +162,15 @@ class ClientFactory(xmlstream.XmlStreamFactory):
                           (self.host.host_jid.full(), str(reason)))
         error = "remote-server-not-found"
         cond = "cancel"
-        if reason.check(DNSNameError, DNSLookupError) and self.host.tryingSRV:
+        if reason.check(DNSNameError, DNSLookupError, DNSServerError) and \
+              self.host.tryingSRV:
             self.stopTrying()
             self.host.tryingSRV = False
             self.host.reactor.connectTCP(self.host.server,
                                          self.host.port,
                                          self.host.f)
             return
-        elif reason.check(DNSNameError, DNSLookupError) and \
+        elif reason.check(DNSNameError, DNSLookupError, DNSServerError) and \
               not self.host.tryingSRV:
             self.stopTrying()
         elif reason.check(TimeoutError):
