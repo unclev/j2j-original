@@ -102,7 +102,8 @@ class J2JComponent(component.Service):
         jidStr = jid.full()
         if jidStr == jid.userhost():
             for cl in self.clients:
-                if cl.startswith(jidStr + '/'):
+                if cl.startswith(jidStr + '/') and \
+                   self.clients[cl].authenticated:
                     r = self.clients[cl]
         else:
             r = self.clients.get(jidStr, None)
