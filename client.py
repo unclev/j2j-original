@@ -359,6 +359,7 @@ class Client(object):
                 iq.attributes["type"] = "result"
                 command = utils.createCommand(iq,"replicate_vCard","completed",
                                               iqId)
+                note = utils.createNote(command, "info", "Replication was done")
                 self.component.send(iq)
                 del self.component.adhoc.vCardSids[iqId]
                 return

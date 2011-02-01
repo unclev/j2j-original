@@ -47,14 +47,14 @@ class AdHoc:
         iq.attributes["id"] = ID
         iq.attributes["type"] = "result"
 
-        if action == 'execute' or action == None and sid == None:
+        if (action == 'execute' or action == None) and sid == None:
             self.commands[node][1](iq, fro, ID)
 
         if action == 'cancel':
             command = utils.createCommand(iq, node, "canceled", sid)
             self.component.send(iq)
 
-        if action == 'complete' or (sid is not None and action is None) and \
+        if action in ('complete', 'execute') and sid is not None and \
            self.commands[node][2] is not None:
             self.commands[node][2](el, iq, sid, fro, ID)
 
@@ -194,4 +194,5 @@ Are you sure want to replicate your host's vCard to your guest's account?")
                                  self.component.db.dbQuote(opts[0]),
                                  str(int(opts[1])), str(uid)))
         self.component.db.commit()
+        utils.createNote(command, "info", "Options were updated")
         self.component.send(iq)

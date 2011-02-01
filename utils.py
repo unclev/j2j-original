@@ -47,6 +47,11 @@ def createCommand(iq, node, status, sid):
     command.attributes["sessionid"] = sid
     return command
 
+def createNote(command, noteType, value):
+    note = command.addElement("note", content=value)
+    note.attributes["type"] = noteType
+    return note
+
 def createForm(iq, formType):
     form = iq.addElement("x")
     form.attributes["xmlns"] = "jabber:x:data"
