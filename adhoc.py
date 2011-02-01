@@ -39,7 +39,8 @@ class AdHoc:
     def onCommand(self, el, fro, ID, node):
         sid = el.getAttribute('sessionid')
         action = el.getAttribute('action')
-        if not node in self.commands.keys(): return False
+        if not node in self.commands.keys():
+            return "cancel", "item-not-found"
 
         iq = Element((None,"iq"))
         iq.attributes["to"] = fro.full()
@@ -49,14 +50,19 @@ class AdHoc:
 
         if (action == 'execute' or action == None) and sid == None:
             self.commands[node][1](iq, fro, ID)
+            return None, None
 
         if action == 'cancel':
             command = utils.createCommand(iq, node, "canceled", sid)
             self.component.send(iq)
+            return None, None
 
         if action in ('complete', 'execute') and sid is not None and \
            self.commands[node][2] is not None:
             self.commands[node][2](el, iq, sid, fro, ID)
+            return None, None
+
+        return "cancel", "bad-request"
 
     def getReplica(self, iq, fro, ID):
         if not fro.full() in self.component.clients.keys():

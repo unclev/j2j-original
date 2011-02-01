@@ -378,7 +378,9 @@ class J2JComponent(component.Service):
 
             if xmlns == "http://jabber.org/protocol/commands" and \
                query.name == "command" and iqType == "set":
-                self.adhoc.onCommand(query, fro, ID, node)
+                etype, condition = self.adhoc.onCommand(query, fro, ID, node)
+                if etype is not None:
+                    self.sendError(el, etype=etype, condition=condition)
                 return
 
             if xmlns == "http://jabber.org/protocol/stats":
