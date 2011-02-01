@@ -154,7 +154,8 @@ class J2JComponent(component.Service):
             toUnq = self.unquoteJID(to.userhost())
             if not self.db.getCount('rosters',
                                     "user_id='%s' AND jid='%s'" % \
-                                    (str(uid), toUnq.encode("utf-8"))):
+                                    (str(uid),
+                                     self.db.dbQuote(toUnq.encode("utf-8")))):
                 self.db.execute("INSERT INTO %s (user_id,jid) \
                                  VALUES ('%s','%s')" % \
                                (self.db.dbTablePrefix+"rosters",
@@ -186,7 +187,8 @@ class J2JComponent(component.Service):
             toUnq = self.unquoteJID(to.full())
             if self.db.getCount('rosters',
                                 "user_id='%s' AND jid='%s'" % \
-                                (str(uid), toUnq.encode("utf-8"))):
+                                (str(uid), 
+                                 self.db.dbQuote(toUnq.encode("utf-8")))):
                 self.db.execute("DELETE FROM %s WHERE \
                                  user_id='%s' AND jid='%s'" % \
                                  (self.db.dbTablePrefix+"rosters",

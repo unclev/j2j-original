@@ -267,7 +267,7 @@ class Client(object):
                 if self.component.db.getCount('rosters',
                                               "user_id='%s' AND jid='%s'" % \
                                          (str(uid),
-                                          ojid.split("/")[0].encode('utf-8'))):
+                                          self.component.db.dbQuote(ojid.split("/")[0].encode('utf-8')))):
                     unPres.attributes["from"] = self.component.quoteJID(ojid)
                     self.component.send(unPres)
         self.component.deleteClient(self.host_jid)
