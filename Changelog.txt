@@ -11,7 +11,9 @@ J2J Component (http://wiki.jrudevels.org/J2J) Changelog:
 	[imp] db schema improvements
 
 	[fix] Add message body in error stanza
-    [fix] Add handling of DNSServerError when connecting via C2S
+        [fix] Add handling of DNSServerError when connecting via C2S
+        [fix] Fix AdHoc "execute" handling for Gajim
+        [fix] AdHoc returns approprite error stanza now
 
 1.1.9:
     [fix] Autoanswer fix: no answer to groupchat and headline messages
