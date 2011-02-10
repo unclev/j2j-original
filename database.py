@@ -74,7 +74,7 @@ class Database:
     def getOptsById(self, uid):
         data = self.fetchone("SELECT replytext,lightnotify,\
                                      autoreplybutforward,onlyroster,\
-                                     autoreplyenabled from " + \
+                                     autoreplyenabled,disablenotifies from " + \
                                      self.dbTablePrefix + \
                                      "users_options WHERE user_id=" + str(uid))
         if data[0] == None:

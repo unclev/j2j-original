@@ -143,7 +143,9 @@ Are you sure want to replicate your host's vCard to your guest's account?")
             "Receive messages only from contacts from Guest roster", opts[3])
         if gtalk:
             utils.addLabel(form, "GTalk's Settings:")
-            utils.addCheckBox(form, "lightNotify", "Light first mail-notify",
+            utils.addCheckBox(form, "disableNotifies",
+                                    "Disable mail notifications", opts[5])
+            utils.addCheckBox(form, "lightNotify", "Light first mail notify",
                               opts[1])
         utils.addLabel(form, "Auto Reply Settings")
         utils.addCheckBox(form, "autoReplyEnabled",
@@ -177,6 +179,10 @@ Are you sure want to replicate your host's vCard to your guest's account?")
                         "/field[@var='lightNotify']/value").queryForString(el)
         if lightNotify:
             opts[1] = utils.strToBool(lightNotify)
+        disableNotifies = xpath.XPathQuery(xPathStr + \
+                        "/field[@var='disableNotifies']/value").queryForString(el)
+        if disableNotifies:
+            opts[5] = utils.strToBool(disableNotifies)
         replyText = xpath.XPathQuery(xPathStr + \
                       "/field[@var='replyText']/value").queryForStringList(el)
         if replyText:
@@ -190,7 +196,8 @@ Are you sure want to replicate your host's vCard to your guest's account?")
                                                  autoreplyenabled='%s',\
                                                  autoreplybutforward='%s',\
                                                  replytext='%s',\
-                                                 lightnotify='%s'\
+                                                 lightnotify='%s',\
+                                                 disablenotifies='%s'\
                                                  WHERE user_id='%s'" % \
                                 (self.component.db.dbTablePrefix + \
                                  "users_options",
@@ -198,7 +205,8 @@ Are you sure want to replicate your host's vCard to your guest's account?")
                                  str(int(opts[4])),
                                  str(int(opts[2])),
                                  self.component.db.dbQuote(opts[0]),
-                                 str(int(opts[1])), str(uid)))
+                                 str(int(opts[1])),
+                                 str(int(opts[5])), str(uid)))
         self.component.db.commit()
         utils.createNote(command, "info", "Options were updated")
         self.component.send(iq)

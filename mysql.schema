@@ -25,5 +25,6 @@ CREATE TABLE j2j_users_options (
     autoreplybutforward boolean DEFAULT false,
     onlyroster boolean DEFAULT false,
     autoreplyenabled boolean DEFAULT false,
+    disablenotifies boolean DEFAULT false,
     primary key(user_id)
 );

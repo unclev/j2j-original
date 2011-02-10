@@ -1,4 +1,4 @@
--- schema revision 2
+-- schema revision 3
 
 CREATE TABLE j2j_users (
     id serial NOT NULL PRIMARY KEY,
@@ -26,7 +26,8 @@ CREATE TABLE j2j_users_options (
     lightnotify boolean DEFAULT false,
     autoreplybutforward boolean DEFAULT false,
     onlyroster boolean DEFAULT false,
-    autoreplyenabled boolean DEFAULT false
+    autoreplyenabled boolean DEFAULT false,
+    disablenotifies boolean DEFAULT false
 );
 
 CREATE INDEX j2j_users_options_user_id ON "j2j_users_options" ("user_id");

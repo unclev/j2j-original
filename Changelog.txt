@@ -5,6 +5,7 @@ J2J Component (http://wiki.jrudevels.org/J2J) Changelog:
 	[add] Command-line option -b for daemonize j2j
 	[add] Auto connect users where j2j is started
 	[add] Auto disconnect users where terminate signal is received
+        [add] Add Disable GMail notifies option
 
 	[chg] use hashlib instead of md5
 

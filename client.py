@@ -412,6 +412,7 @@ class Client(object):
         if not myuid:
             return
         options = self.component.db.getOptsById(myuid)
+        if options[5]: return
         if self.mail_time == 0:
             firstTime = True
         msgs = []
@@ -488,6 +489,8 @@ class Client(object):
 
     def route(self, el):
         fro = el.getAttribute("from")
+        if fro is None:
+            return
         to = el.getAttribute("to")
         try:
             fro = internJID(fro)
