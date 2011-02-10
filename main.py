@@ -60,7 +60,7 @@ def main():
         date = str(date)
         revision = revision+" %s-%s-%s" % (date[:4], date[4:6], date[6:8])
 
-    version = "1.1.8" + revision
+    version = "1.2.10" + revision
 
     from optparse import OptionParser
     parser = OptionParser(version=

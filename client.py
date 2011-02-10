@@ -308,11 +308,9 @@ class Client(object):
 
     def onPresence(self,el):
         fro = el.getAttribute("from")
-        to = el.getAttribute("to")
         presType = el.getAttribute("type")
         try:
             fro = internJID(fro)
-            to = internJID(to)
         except jid.InvalidFormat:
             return
         uid = self.component.db.getIdByJid(self.host_jid.userhost())
@@ -493,11 +491,12 @@ class Client(object):
         to = el.getAttribute("to")
         try:
             fro = internJID(fro)
-            to = internJID(to)
-        except:
+            if to is not None:
+                to = internJID(to)
+        except jid.InvalidFormat:
             return
         el.attributes["from"] = self.component.quoteJID(fro.full())
-        if to.full() == to.userhost():
+        if not to is None and to.full() == to.userhost():
             el.attributes["to"] = self.host_jid.userhost()
         else:
             el.attributes["to"] = self.host_jid.full()

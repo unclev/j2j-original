@@ -14,6 +14,7 @@ J2J Component (http://wiki.jrudevels.org/J2J) Changelog:
         [fix] Add handling of DNSServerError when connecting via C2S
         [fix] Fix AdHoc "execute" handling for Gajim
         [fix] AdHoc returns approprite error stanza now
+        [fix] Fix crash when "to" attribute is not specified in a client stanza
 
 1.1.9:
     [fix] Autoanswer fix: no answer to groupchat and headline messages
