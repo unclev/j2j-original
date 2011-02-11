@@ -184,6 +184,7 @@ class ClientFactory(xmlstream.XmlStreamFactory):
                                     % (self.host.host_jid.full(), str(reason)))
 
 class Client(object):
+    PING_INTERVAL = 60
     def __init__(self, uid, el, reactor, component, host_jid, client_jid,
                  server, secret, port=5222, import_roster=False,
                  remove_from_roster=False):
@@ -234,8 +235,14 @@ class Client(object):
         self.xmlstream.rawDataOutFn = self.rawOut
         if not self.disconnect:
             self.connected = True
+            self.ping()
         else:
             self.xmlstream.sendFooter()
+
+    def ping(self):
+        self.xmlstream.send(' ')
+        if not self.disconnect:
+            self.reactor.callLater(self.PING_INTERVAL, self.ping)
 
     def rawIn(self,data):
         self.component.debug.clientsXmlsLog(data, self.client_jid,

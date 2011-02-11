@@ -10,6 +10,7 @@ J2J Component (http://wiki.jrudevels.org/J2J) Changelog:
 	[chg] use hashlib instead of md5
 
 	[imp] db schema improvements
+        [imp] pings for client connections to prevent disconnecting from some wrong servers like livejournal.com
 
 	[fix] Add message body in error stanza
         [fix] Add handling of DNSServerError when connecting via C2S

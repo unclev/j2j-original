@@ -38,7 +38,7 @@ class AdHoc:
 
     def onCommand(self, el, fro, ID, node):
         sid = el.getAttribute('sessionid')
-        action = el.getAttribute('action')
+        action = el.getAttribute('action', 'execute')
         if not node in self.commands.keys():
             return "cancel", "item-not-found"
 
@@ -48,7 +48,7 @@ class AdHoc:
         iq.attributes["id"] = ID
         iq.attributes["type"] = "result"
 
-        if (action == 'execute' or action == None) and sid == None:
+        if action == 'execute' and sid == None:
             self.commands[node][1](iq, fro, ID)
             return None, None
 
