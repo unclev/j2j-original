@@ -15,6 +15,7 @@ User=j2j
 Name=j2j
 Password=db_secret
 Prefix=j2j_
+mysql_ping_period=2 ; ping period for mysql in hours. 0 for none
 
 [admins]
 List=admin1@foo.org,admin2@example.net,admin3@some.net

@@ -11,6 +11,7 @@ J2J Component (http://wiki.jrudevels.org/J2J) Changelog:
 	[imp] db schema improvements
 	[imp] pings for client connections to prevent disconnecting from some wrong servers like livejournal.com
 	[imp] remove postgresql's hint about quoted strings
+        [imp] pings for mysql to keep connection alive
 
 	[fix] Add message body in error stanza
 	[fix] Add handling of DNSServerError when connecting via C2S

@@ -49,6 +49,9 @@ class Config:
         self.DB_NAME = get("database", "Name", required=True)
         self.DB_PASS = get("database", "Password", required=True)
         self.DB_PREFIX = get("database", "Prefix", default='j2j_')
+        self.MYSQL_PING_PERIOD = get("database", "mysql_ping_period",
+                                     default=2)
+        self.MYSQL_PING_PERIOD = int(self.MYSQL_PING_PERIOD)
 
         self.DEBUG_REGISTRATIONS = getboolean("debug", "registrations",
                                               default=False)

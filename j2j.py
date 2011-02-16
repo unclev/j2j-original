@@ -54,7 +54,7 @@ class J2JComponent(component.Service):
                                 self.config.DEBUG_COMPXML,
                                 self.config.DEBUG_CLXML,
                                 self.config.DEBUG_CLXMLACL)
-        self.db = database.Database(self.config)
+        self.db = database.Database(self.config, self.reactor)
         self.xmlstream = xs
         self.xmlstream.rawDataInFn = self.rawIn
         self.xmlstream.rawDataOutFn = self.rawOut

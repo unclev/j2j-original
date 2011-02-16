@@ -4,7 +4,8 @@
 __id__ = "$Id$"
 
 class Database:
-    def __init__(self,config):
+    def __init__(self, config, reactor):
+        self.reactor = reactor
         self.config = config
         if self.config.DB_TYPE == "mysql":
             exec 'import MySQLdb'
@@ -13,6 +14,7 @@ class Database:
                                       passwd=self.config.DB_PASS,
                                       db=self.config.DB_NAME)
             self.quote_tpl = "'%s'"
+            self.ping()
         elif self.config.DB_TYPE == "postgres":
             exec 'import pgdb'
             self.db = pgdb.connect(host=self.config.DB_HOST,
@@ -31,19 +33,24 @@ class Database:
         if self.db:
             self.db.close()
 
+    def ping(self):
+        self.db.ping(True)
+        self.reactor.callLater(self.config.MYSQL_PING_PERIOD * 3600,
+                               self.ping)
+
     def dbQuote(self, string):
         return self.quote_tpl % \
                  (string.replace("\\", "\\\\").replace("'", "\\'"),)
 
     def fetchone(self, query):
-        self.dbCursor.execute(query)
+        self.execute(query)
         data = self.dbCursor.fetchone()
         if data == None:
             return data
         return list(data)
 
     def fetchall(self,query):
-        self.dbCursor.execute(query)
+        self.execute(query)
         return self.dbCursor.fetchall()
 
     def execute(self,query):
