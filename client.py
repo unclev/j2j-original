@@ -272,7 +272,7 @@ class Client(object):
                 self.component.send(unPres)
             for ojid in self.presences.keys():
                 if self.component.db.getCount('rosters',
-                                              "user_id='%s' AND jid='%s'" % \
+                                              "user_id='%s' AND jid=%s" % \
                                          (str(uid),
                                           self.component.db.dbQuote(ojid.split("/")[0].encode('utf-8')))):
                     unPres.attributes["from"] = self.component.quoteJID(ojid)
@@ -323,7 +323,7 @@ class Client(object):
         uid = self.component.db.getIdByJid(self.host_jid.userhost())
         if not uid: return
         isInRoster = self.component.db.getCount("rosters",
-                                                "user_id='%s' AND jid='%s'" % \
+                                                "user_id='%s' AND jid=%s" % \
                                                 (str(uid),
                     self.component.db.dbQuote(fro.userhost().encode('utf-8'))))
         if presType == "available" or presType == None:

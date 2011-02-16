@@ -153,11 +153,11 @@ class J2JComponent(component.Service):
         if presenceType == "subscribe":
             toUnq = self.unquoteJID(to.userhost())
             if not self.db.getCount('rosters',
-                                    "user_id='%s' AND jid='%s'" % \
+                                    "user_id='%s' AND jid=%s" % \
                                     (str(uid),
                                      self.db.dbQuote(toUnq.encode("utf-8")))):
                 self.db.execute("INSERT INTO %s (user_id,jid) \
-                                 VALUES ('%s','%s')" % \
+                                 VALUES ('%s',%s)" % \
                                (self.db.dbTablePrefix+"rosters",
                                 str(uid),
                                 self.db.dbQuote(toUnq.encode("utf-8"))))
@@ -186,11 +186,11 @@ class J2JComponent(component.Service):
         if presenceType == "unsubscribe" or presenceType == "unsubscribed":
             toUnq = self.unquoteJID(to.full())
             if self.db.getCount('rosters',
-                                "user_id='%s' AND jid='%s'" % \
+                                "user_id='%s' AND jid=%s" % \
                                 (str(uid), 
                                  self.db.dbQuote(toUnq.encode("utf-8")))):
                 self.db.execute("DELETE FROM %s WHERE \
-                                 user_id='%s' AND jid='%s'" % \
+                                 user_id='%s' AND jid=%s" % \
                                  (self.db.dbTablePrefix+"rosters",
                                   str(uid),
                                   self.db.dbQuote(toUnq.encode('utf-8'))))
@@ -592,7 +592,7 @@ Description: http://wiki.JRuDevels.org/index.php/J2J")
                             port, \
                             import_roster, \
                             remove_from_guest_roster) VALUES \
-                            ('%s','%s','%s','%s','%s',%s,'%s','%s')" % \
+                            (%s,%s,%s,%s,%s,%s,'%s','%s')" % \
                             (self.db.dbTablePrefix,
                              self.db.dbQuote(fro.userhost().encode('utf-8')),
                              self.db.dbQuote(username.encode('utf-8')),
@@ -643,10 +643,10 @@ Host JID:%s\nGuest JID:%s" % (self.cJid,
                     self.send(pres)
                 self.db.execute("DELETE FROM %s WHERE user_id='%s'" % \
                                 (self.db.dbTablePrefix+"rosters", str(uid)))
-            self.db.execute("UPDATE %s SET username='%s', \
-                                           domain='%s', \
-                                           server='%s', \
-                                           password='%s', \
+            self.db.execute("UPDATE %s SET username=%s, \
+                                           domain=%s, \
+                                           server=%s, \
+                                           password=%s, \
                                            port=%s, \
                                            remove_from_guest_roster='%s' \
                                            WHERE id='%s'" % \

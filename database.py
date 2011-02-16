@@ -12,12 +12,14 @@ class Database:
                                       user=self.config.DB_USER,
                                       passwd=self.config.DB_PASS,
                                       db=self.config.DB_NAME)
+            self.quote_tpl = "'%s'"
         elif self.config.DB_TYPE == "postgres":
             exec 'import pgdb'
             self.db = pgdb.connect(host=self.config.DB_HOST,
                                    user=self.config.DB_USER,
                                    password=self.config.DB_PASS,
                                    database=self.config.DB_NAME)
+            self.quote_tpl = "E'%s'"
         else:
             self.db = None
         self.dbCursor = self.db.cursor()
@@ -30,7 +32,8 @@ class Database:
             self.db.close()
 
     def dbQuote(self, string):
-        return string.replace("\\", "\\\\").replace("'", "\\'")
+        return self.quote_tpl % \
+                 (string.replace("\\", "\\\\").replace("'", "\\'"),)
 
     def fetchone(self, query):
         self.dbCursor.execute(query)
@@ -59,8 +62,8 @@ class Database:
 
     def getIdByJid(self, qjid):
         a = self.fetchone("SELECT id from " + self.dbTablePrefix + \
-                          "users WHERE jid='" + \
-                          self.dbQuote(qjid.encode("utf-8")) + "'")
+                          "users WHERE jid=" + \
+                          self.dbQuote(qjid.encode("utf-8")))
         if a == None:
             return a
         return a[0]

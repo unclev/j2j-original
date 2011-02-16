@@ -195,7 +195,7 @@ Are you sure want to replicate your host's vCard to your guest's account?")
         self.component.db.execute("UPDATE %s SET onlyroster='%s',\
                                                  autoreplyenabled='%s',\
                                                  autoreplybutforward='%s',\
-                                                 replytext='%s',\
+                                                 replytext=%s,\
                                                  lightnotify='%s',\
                                                  disablenotifies='%s'\
                                                  WHERE user_id='%s'" % \

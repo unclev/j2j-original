@@ -1,22 +1,22 @@
 J2J Component (http://wiki.jrudevels.org/J2J) Changelog:
 1.2.10:
-	[add] Roster import by sending subscribe-presence and settings for it in
-	jabber:iq:register form
+	[add] Roster import by sending subscribe-presence and settings for it in jabber:iq:register form
 	[add] Command-line option -b for daemonize j2j
 	[add] Auto connect users where j2j is started
 	[add] Auto disconnect users where terminate signal is received
-        [add] Add Disable GMail notifies option
+	[add] Add Disable GMail notifies option
 
 	[chg] use hashlib instead of md5
 
 	[imp] db schema improvements
-        [imp] pings for client connections to prevent disconnecting from some wrong servers like livejournal.com
+	[imp] pings for client connections to prevent disconnecting from some wrong servers like livejournal.com
+	[imp] remove postgresql's hint about quoted strings
 
 	[fix] Add message body in error stanza
-        [fix] Add handling of DNSServerError when connecting via C2S
-        [fix] Fix AdHoc "execute" handling for Gajim
-        [fix] AdHoc returns approprite error stanza now
-        [fix] Fix crash when "to" attribute is not specified in a client stanza
+	[fix] Add handling of DNSServerError when connecting via C2S
+	[fix] Fix AdHoc "execute" handling for Gajim
+	[fix] AdHoc returns approprite error stanza now
+	[fix] Fix crash when "to" attribute is not specified in a client stanza
 
 1.1.9:
     [fix] Autoanswer fix: no answer to groupchat and headline messages

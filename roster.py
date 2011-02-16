@@ -96,7 +96,7 @@ class Roster:
                     self.host.component.send(presence)
                     presence.attributes['type'] = 'unsubscribed'
                     self.host.component.send(presence)
-                    db.execute("DELETE FROM %s WHERE user_id='%s' and jid='%s'" % \
+                    db.execute("DELETE FROM %s WHERE user_id='%s' and jid=%s" % \
                                            (db.dbTablePrefix+"rosters",
                                             str(uid),
                                             db.dbQuote(jid.encode("utf-8"))))
@@ -113,7 +113,7 @@ class Roster:
                                             content=self.items[jid][0])
                     self.host.component.send(presence)
                     db.execute("INSERT INTO %s (user_id,jid) VALUES \
-                               ('%s','%s')" % (db.dbTablePrefix+"rosters",
+                               ('%s',%s)" % (db.dbTablePrefix+"rosters",
                                    str(uid), db.dbQuote(jid.encode("utf-8"))))
             db.commit()
         if iqType == "set":
