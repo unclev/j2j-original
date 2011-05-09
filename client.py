@@ -228,6 +228,7 @@ class Client(object):
                      "User %s is connecting to %s:%s with guest-jid %s" % \
                      (host_jid.full(), server,str(port), client_jid.full()))
         self.connector.connect()
+        self.ping_obj = None
 
     def onConnected(self, xs):
         self.xmlstream = xs
@@ -242,7 +243,8 @@ class Client(object):
     def ping(self):
         self.xmlstream.send(' ')
         if not self.disconnect:
-            self.reactor.callLater(self.PING_INTERVAL, self.ping)
+            self.ping_obj = self.reactor.callLater(self.PING_INTERVAL,
+						   self.ping)
 
     def rawIn(self,data):
         self.component.debug.clientsXmlsLog(data, self.client_jid,
@@ -278,6 +280,9 @@ class Client(object):
                     unPres.attributes["from"] = self.component.quoteJID(ojid)
                     self.component.send(unPres)
         self.component.deleteClient(self.host_jid)
+        if self.ping_obj:
+            self.ping_obj.cancel()
+            self.ping_obj = None
 
     def onAuthenticated(self, xs):
         if self.disconnect:
